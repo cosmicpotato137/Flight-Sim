@@ -1,0 +1,93 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel PerlinNoise2D
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+
+float2 offset;
+float2 scale;
+float noiseWeight;
+int seed;
+float alpha;
+
+float interpolate(float a0, float a1, float w) {
+    // You may want clamping by inserting:
+    
+    //if (0.0 > w) return a0;
+    //if (1.0 < w) return a1;
+    //return (a1 - a0) * w + a0;  
+    // Use this cubic interpolation [[Smoothstep]] instead, for a smooth appearance:
+    return (a1 - a0) * (3.0 - w * 2.0) * w * w + a0;
+    
+    // Use [[Smootherstep]] for an even smoother result with a second derivative equal to zero on boundaries:
+    //return (a1 - a0) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a0;
+    
+}
+
+/* Create random direction vector
+ */
+float2 randomGradient(int ix, int iy, int seed) {
+    float2 random = float2(sin(ix * 21942.f + iy * 171324.f + 8912.f), cos(ix * 23157.f * iy * 217832.f + 9758.f)) * 2920.f;
+    float r = dot(random, float2(seed, seed));
+    return float2(cos(r), sin(r));
+}
+
+// Computes the dot product of the distance and gradient vectors.
+float dotGridGradient(int ix, int iy, float x, float y, float2 gradient) {
+    // Compute the distance vector
+    float dx = x - (float)ix;
+    float dy = y - (float)iy;
+
+    // Compute the dot-product
+    return (dx * gradient.x + dy * gradient.y);
+}
+
+// Compute Perlin noise at coordinates x, y
+float perlin(float x, float y, float2 offset, float2 scale, int seed) {
+    // tile the random looking part of the noise function
+    y = y / scale.y + offset.y;
+    x = x / scale.x + offset.x;
+
+    int x0, y0;
+    // Determine grid cell coordinates
+    if (x > 0)
+        x0 = (int)x;
+    else
+        x0 = (int)(x - 1);
+    int x1 = x0 + 1;
+
+    if (y > 0)
+        y0 = (int)y;
+    else
+        y0 = (int)(y - 1);
+    int y1 = y0 + 1;
+
+    // Determine interpolation weights
+    // Could also use higher order polynomial/s-curve here
+    float sx = x - (float)x0;
+    float sy = y - (float)y0;
+
+    // Interpolate between grid point gradients
+    float n0, n1, ix0, ix1, value;
+
+    n0 = dotGridGradient(x0, y0, x, y, randomGradient(x0, y0, seed));
+    n1 = dotGridGradient(x1, y0, x, y, randomGradient(x1, y0, seed));
+    ix0 = interpolate(n0, n1, sx);
+
+    n0 = dotGridGradient(x0, y1, x, y, randomGradient(x0, y1, seed));
+    n1 = dotGridGradient(x1, y1, x, y, randomGradient(x1, y1, seed));
+    ix1 = interpolate(n0, n1, sx);
+
+    value = interpolate(ix0, ix1, sy);
+    return value;
+}
+
+[numthreads(8,8,1)]
+void PerlinNoise2D(uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here!
+    float v = perlin(id.x, id.y, offset, scale, seed) * noiseWeight + 0.5;
+    //v = randomGradient(id.x / scale.x + offset.x, id.y / scale.y + offset.y).x;
+    Result[id.xy] = float4(v,v,v,alpha);
+}

@@ -1,0 +1,13 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Multiply2D
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Input;
+RWTexture2D<float4> Result;
+
+[numthreads(8,8,1)]
+void Multiply2D (uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = Input[id.xy] * Result[id.xy];
+}

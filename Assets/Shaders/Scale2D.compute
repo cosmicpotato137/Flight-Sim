@@ -1,0 +1,21 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Scale2D
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+RWTexture2D<float4> Input;
+
+[numthreads(8,8,1)]
+void Scale2D (uint3 id : SV_DispatchThreadID)
+{
+    uint2 isize;
+    Input.GetDimensions(isize.x, isize.y);
+    uint2 rsize;
+    Result.GetDimensions(rsize.x, rsize.y);
+    uint2 pos;
+    pos.x = float(isize.x) / float(rsize.x) * float(id.x);
+    pos.y = float(isize.y) / float(rsize.y) * float(id.y);
+    Result[id.xy] = Input[pos];
+    //Result[id.xy] = float4(1, 1, 1, 1);
+}
