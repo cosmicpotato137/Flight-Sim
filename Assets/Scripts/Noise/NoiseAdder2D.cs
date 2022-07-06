@@ -38,7 +38,7 @@ public class NoiseAdder2D : Noise2D
             for (int i = 0;  i < noises.Count; i++)
             {
                 noises[i].resolution = resolution;
-                RenderTexture rt = noises[i].CalculateNoise(noises[i].offset + offset, noises[i].scale * scale, resolution);
+                RenderTexture rt = noises[i].CalculateNoise(noises[i].offset + offset / noises[i].scale, noises[i].scale * scale, resolution);
                 result = AddNoise(rt, result, resolution);
             }
         }

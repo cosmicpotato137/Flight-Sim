@@ -16,7 +16,6 @@ public class HeightMap : MonoBehaviour
     public bool realtimeGeneration;
 
     RenderTexture heightmapBuffer;
-    public Texture2D heightmap;
     ComputeBuffer vertexBuffer;
     Vector3[] vertices;
     ComputeBuffer indexBuffer;
@@ -25,6 +24,13 @@ public class HeightMap : MonoBehaviour
     Vector4[] debugs;
 
     Material material;
+
+    private void OnValidate()
+    {
+        xdim = (int)Mathf.Clamp(xdim, 1, Mathf.Infinity);
+        ydim = (int)Mathf.Clamp(ydim, 1, Mathf.Infinity);
+
+    }
 
     public void InitBuffers()
     {
@@ -35,11 +41,7 @@ public class HeightMap : MonoBehaviour
         debugs = new Vector4[triCount];
 
         // get heightmap
-        heightmap = noise.GetNoiseTexture();
-        heightmapBuffer = new RenderTexture(heightmap.width, heightmap.height, 1, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
-        heightmapBuffer.enableRandomWrite = true;
-        heightmapBuffer.Create();
-        Graphics.Blit(heightmap, heightmapBuffer);
+        heightmapBuffer = noise.CalculateNoise(noise.offset, noise.scale, Mathf.Max(xdim, ydim));
 
         // setup GPU buffers
         vertexBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
