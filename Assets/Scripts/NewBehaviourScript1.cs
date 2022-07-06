@@ -4,9 +4,7 @@ using System.Collections.Generic;
 
 public class NewBehaviourScript1 : MonoBehaviour
 {
-    public NoiseAdder2D noiseViewer;
-    public PerlinNoise3D p3;
-    public List<Texture2D> layers;
+    public PerlinNoise2D p3;
 
     // Use this for initialization
     void Start()

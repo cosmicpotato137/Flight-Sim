@@ -45,7 +45,7 @@ public class MarchingCubesExp : MonoBehaviour
         int numVoxelsPerAxis = numPointsPerAxis - 1;
         int numThreadsPerAxis = Mathf.CeilToInt(numVoxelsPerAxis / (float)threadGroupSize);
 
-        RenderTexture rt = new RenderTexture(noiseGenerator.CalculateNoise(numPointsPerAxis, new Vector3(0, 0, 0), new Vector3(1, 1, 1)));
+        RenderTexture rt = new RenderTexture(noiseGenerator.CalculateNoise());
 
         triangleBuffer.SetCounterValue(0);
         shader.SetTexture(shaderHandle, "points", rt);

@@ -5,8 +5,6 @@ using System;
 [CustomPropertyDrawer(typeof(Noise), true)]
 public class NoiseDrawer : PropertyDrawer
 {
-    protected bool showPreview = true;
-    protected bool realtimeEditing = true;
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
@@ -18,17 +16,13 @@ public class NoiseDrawer : PropertyDrawer
             if (data == null) return EditorGUIUtility.singleLineHeight;
             SerializedObject serializedObject = new SerializedObject(data);
             SerializedProperty prop = serializedObject.GetIterator();
+            Noise config = property.objectReferenceValue as Noise;
 
-            // set Noise2D if it exists;
-            Noise config = null;
-            try
-            {
-                config = property.objectReferenceValue as Noise;
-            }
-            catch (InvalidCastException)
-            {
-                // do nothing
-            }
+            //catch (InvalidCastException)
+            //{
+            //    // do nothing
+
+            //}
                 
 
             totalHeight = GetExpandedHeight(prop, serializedObject, config, totalHeight);
@@ -63,7 +57,7 @@ public class NoiseDrawer : PropertyDrawer
         totalHeight += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
 
         // preview window
-        if (showPreview && config)
+        if (config.showPreview && config)
                 totalHeight += config.previewRes + EditorGUIUtility.standardVerticalSpacing;
         totalHeight += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
 
@@ -86,14 +80,6 @@ public class NoiseDrawer : PropertyDrawer
             SerializedObject serializedObject = new SerializedObject(data);
             var config = (Noise)property.objectReferenceValue;
 
-            // noise calculations
-            if (realtimeEditing)
-            {
-                config.ReleaseNoiseRT();
-                config.CreateNoiseRT();
-                config.CalculateNoise();
-            }
-
             if (property.isExpanded)
             {
                 EditorGUI.indentLevel++;
@@ -101,7 +87,7 @@ public class NoiseDrawer : PropertyDrawer
                 // Draw background
                 GUI.Box(new Rect(0, position.y + EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing - 1, Screen.width, position.height - EditorGUIUtility.singleLineHeight - EditorGUIUtility.standardVerticalSpacing), "");
 
-                // Iterate over all the values and draw them
+                // Iterate over all the serialized fields and draw them
                 SerializedProperty prop = serializedObject.GetIterator();
                 float y = position.y + EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
                 if (prop.NextVisible(true))
@@ -110,9 +96,6 @@ public class NoiseDrawer : PropertyDrawer
                     {
                         // Don't bother drawing the class file
                         if (prop.name == "m_Script") continue;
-                        else if (prop.name == "previewRT") continue;
-                        else if (prop.name == "noiseRT") continue;
-                        else if (prop.name == "previewRes") continue;
                         else
                         {
                             float height = EditorGUI.GetPropertyHeight(prop, new GUIContent(prop.displayName), true);
@@ -130,20 +113,19 @@ public class NoiseDrawer : PropertyDrawer
                 // save texture button
                 if (GUI.Button(EditorGUI.IndentedRect(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight)), "Save Texture"))
                     config.SaveTexture();
-                y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
+                y = NextLine(y);
 
-                // realtime editing
-                realtimeEditing = EditorGUI.Toggle(new Rect(position.x, y, position.width / 2, EditorGUIUtility.singleLineHeight), "Realtime Editing", realtimeEditing);
-                EditorGUI.BeginDisabledGroup(realtimeEditing);
+                // realtime preview
+                config.realtime = EditorGUI.Toggle(new Rect(position.x, y, position.width / 2, EditorGUIUtility.singleLineHeight), "Realtime Editing", config.realtime);
+
+                // preview calculation
+                EditorGUI.BeginDisabledGroup(config.realtime);
                 if (GUI.Button(EditorGUI.IndentedRect(new Rect(position.x + position.width / 2, y, position.width / 2, EditorGUIUtility.singleLineHeight)), "Calculate Noise"))
-                {
-                    config.ReleaseNoiseRT();
-                    config.CreateNoiseRT();
-                    config.CalculateNoise();
-                }
+                    config.CalculatePreview();
                 EditorGUI.EndDisabledGroup();
-                y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
-
+                if (config.realtime)
+                    config.CalculatePreview();
+                y = NextLine(y);
 
                 y = PreviewTextureGUI(position, y, config);
 
@@ -163,19 +145,21 @@ public class NoiseDrawer : PropertyDrawer
 
     protected virtual float PreviewTextureGUI(Rect position, float y, Noise config)
     {
-        showPreview = EditorGUI.Foldout(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight), showPreview, new GUIContent("Preview Noise"), true);
-        y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
+        config.showPreview = EditorGUI.Foldout(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight), config.showPreview, new GUIContent("Preview Noise"), true);
+        y = NextLine(y);
 
-        if (!config.previewRT) showPreview = false;
-        if (showPreview)
+        if (config.showPreview)
         {
-            // preview calculation
-            config.CalculatePreview();
-
-            GUI.Box(EditorGUI.IndentedRect(new Rect(position.x, y, position.width, config.previewRT.height)), config.previewRT);
-            y += config.previewRT.height + EditorGUIUtility.standardVerticalSpacing;
+            GUI.Box(EditorGUI.IndentedRect(new Rect(position.x, y, position.width, config.previewRes)), config.previewRT);
+            y += config.previewRes + EditorGUIUtility.standardVerticalSpacing;
         }
 
         return y;
     }
+
+    protected float NextLine(float y)
+    {
+        return y + EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
+    }
+
 }

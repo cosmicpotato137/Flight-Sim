@@ -3,50 +3,40 @@ using System.IO;
 
 public abstract class Noise3D : Noise
 {
+    public Vector3 offset;
+    public Vector3 scale;
     [HideInInspector]
     public int axis;
     [HideInInspector]
     public int layer;
 
-    private void OnValidate()
+    public abstract RenderTexture CalculateNoise(Vector3 offset, Vector3 scale, int resolution);
+    public override RenderTexture CalculateNoise()
     {
-        previewRes = 100;
-        // create preview texture 
-        previewRT = new RenderTexture(previewRes, previewRes, 0, RenderTextureFormat.ARGB32);
-        previewRT.enableRandomWrite = true;
-        previewRT.Create();
-
-        CreateShader();
+        return CalculateNoise(offset, scale, resolution);
     }
 
     public override void CreateShader()
     {
+        string shaderName = "SliceVolume";
+        ComputeShader[] compShaders = (ComputeShader[])Resources.FindObjectsOfTypeAll(typeof(ComputeShader));
+        for (int i = 0; i < compShaders.Length; i++)
+        {
+            if (compShaders[i].name == shaderName)
+            {
+                previewShader = compShaders[i];
+                break;
+            }
+        }
+
         if (previewShader && previewShader.HasKernel("Slicer"))
             previewHandle = previewShader.FindKernel("Slicer");
-    }
-
-    public override void CreateNoiseRT()
-    {
-        resolution = (int)Mathf.Clamp(resolution, 1, Mathf.Infinity);
-        noiseRT = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGB32);
-        noiseRT.volumeDepth = resolution;
-        noiseRT.dimension = UnityEngine.Rendering.TextureDimension.Tex3D;
-        noiseRT.enableRandomWrite = true;
-        noiseRT.Create();
-    }
-
-    public override void ReleaseNoiseRT()
-    {
-        if (noiseRT && noiseRT.IsCreated())
-            noiseRT.Release();
     }
 
     // convert render texture to Texture2D
     public Texture2D GetNoiseTexture()
     {
-        CalculateNoise();
-
-        RenderTexture.active = noiseRT;
+        RenderTexture.active = CalculateNoise();
         Texture2D noiseTexture = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);
         noiseTexture.ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
         noiseTexture.Apply();
@@ -76,36 +66,40 @@ public abstract class Noise3D : Noise
 
     public override void CalculatePreview()
     {
-        if (previewShader && previewShader.HasKernel("Slicer"))
+        if (previewHandle != -1)
         {
-            int numThreadGroups = Mathf.CeilToInt(previewRes / 8.0f);
-            previewShader.SetTexture(previewHandle, "Volume", noiseRT);
+            previewShader.SetTexture(previewHandle, "Volume", CalculateNoise());
             previewShader.SetTexture(previewHandle, "Result", previewRT);
             previewShader.SetInt("axis", axis);
             previewShader.SetInt("layer", layer-1);
-            previewShader.Dispatch(previewHandle, numThreadGroups, numThreadGroups, 1);
+
+            uint kx = 0, ky = 0, kz = 0;
+            previewShader.GetKernelThreadGroupSizes(previewHandle, out kx, out ky, out kz);
+            previewShader.Dispatch(previewHandle, (int)(previewRes / kx) + 1, (int)(previewRes / ky) + 1, (int)(previewRes / kz) + 1);
         }
     }
 
     public RenderTexture Slice(int axis, int layer)
     {
-        RenderTexture rt = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGB32);
-        rt.enableRandomWrite = true;
-        rt.Create();
+        RenderTexture result = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGB32);
+        result.enableRandomWrite = true;
+        result.Create();
 
         if (previewShader && previewShader.HasKernel("Slicer"))
         {
-            int numThreadGroups = Mathf.CeilToInt(previewRes / 8.0f);
-            previewShader.SetTexture(previewHandle, "Volume", noiseRT);
-            previewShader.SetTexture(previewHandle, "Result", rt);
+            previewShader.SetTexture(previewHandle, "Volume", CalculateNoise());
+            previewShader.SetTexture(previewHandle, "Result", result);
             axis = Mathf.Clamp(axis, 0, 2);
             previewShader.SetInt("axis", axis);
             layer = Mathf.Clamp(layer, 0, resolution - 1);
             previewShader.SetInt("layer", layer);
-            previewShader.Dispatch(previewHandle, numThreadGroups, numThreadGroups, 1);
+
+            uint kx = 0, ky = 0, kz = 0;
+            noiseShader.GetKernelThreadGroupSizes(previewHandle, out kx, out ky, out kz);
+            noiseShader.Dispatch(previewHandle, (int)(previewRes / kx) + 1, (int)(previewRes / ky) + 1, (int)(previewRes / kz) + 1);
         }
 
-        return rt;
+        return result;
     }
 
 }

@@ -1,16 +1,23 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+struct Triangle
+{
+    public Vector3 A, B, C;
+}
+
 [ExecuteInEditMode]
 public class MarchingCubes : MonoBehaviour
 {
     public ComputeShader mcShader;
-    public Noise3D noise;
+    public PerlinNoise3D noise;
     int mcShaderID;
 
     public Vector3 scale;
+    [Range(1.0f, 100000)]
     public int maxChunkSize = 1000;
     public int xdim = 5;
     public int ydim = 5;
@@ -19,42 +26,41 @@ public class MarchingCubes : MonoBehaviour
     public bool realtimeGeneration;
 
     RenderTexture heightmapBuffer;
-    ComputeBuffer vertexBuffer;
-    Vector3[] vertices;
+    ComputeBuffer triangleBuffer;
+    ComputeBuffer triCountBuffer;
+    Triangle[] triangles;
     ComputeBuffer indexBuffer;
     int[] indices;
     ComputeBuffer debugBuffer;
     Matrix4x4[] debugs;
 
-    Material material;
+    int numTris;
 
     public void InitBuffers()
     {
         // setup local arrays
-        int triCount = xdim * ydim * zdim;
-        if (triCount > 1000)
+        int maxTris = xdim * ydim * zdim;
+        if (maxTris > maxChunkSize)
         {
             Debug.LogWarning("chunk size max reached!");
-            triCount = 1000;
+            maxTris = maxChunkSize;
         }
-        vertices = new Vector3[triCount * 15];
-        indices = new int[triCount * 15];
+        triangles = new Triangle[maxTris * 5];
         //debugs = new Matrix4x4[triCount];
 
-        noise.CreateNoiseRT();
-        noise.CalculateNoise();
-        heightmapBuffer = noise.noiseRT;
+        
+        heightmapBuffer = noise.CalculateNoise();
 
         // setup GPU buffers
-        vertexBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
-        indexBuffer = new ComputeBuffer(indices.Length, sizeof(int), ComputeBufferType.Structured);
+        triangleBuffer = new ComputeBuffer(triangles.Length, sizeof(float) * 9, ComputeBufferType.Append);
+        triCountBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         //debugBuffer = new ComputeBuffer(debugs.Length, sizeof(float) * 4 * 4, ComputeBufferType.Structured);
     }
 
     public void ReleaseBuffers()
     {
-        vertexBuffer.Release();
-        indexBuffer.Release();
+        triCountBuffer.Release();
+        triangleBuffer.Release();
         RenderTexture.active = null;
         heightmapBuffer.Release();
         //debugBuffer.Release();
@@ -65,8 +71,8 @@ public class MarchingCubes : MonoBehaviour
         // setup shader
         mcShaderID = mcShader.FindKernel("MeshGen");
         mcShader.SetTexture(mcShaderID, "noiseTexture", heightmapBuffer);
-        mcShader.SetBuffer(mcShaderID, "vertices", vertexBuffer);
-        mcShader.SetBuffer(mcShaderID, "indices", indexBuffer);
+        triangleBuffer.SetCounterValue(0);
+        mcShader.SetBuffer(mcShaderID, "triangles", triangleBuffer);
         //mcShader.SetBuffer(mcShaderID, "debug", debugBuffer);
 
         mcShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
@@ -80,11 +86,14 @@ public class MarchingCubes : MonoBehaviour
     {
         uint kx = 0, ky = 0, kz = 0;
         mcShader.GetKernelThreadGroupSizes(mcShaderID, out kx, out ky, out kz);
-        mcShader.Dispatch(mcShaderID, (int)(xdim / kx) + 1, (int)(ydim / ky) + 1, (int)(zdim / kz) + 1);
+        mcShader.Dispatch(mcShaderID, (int)((float)xdim / (float)kx) + 1, (int)((float)ydim / (float)ky) + 1, (int)((float)zdim / (float)kz) + 1);
 
         // get data from GPU
-        vertexBuffer.GetData(vertices);
-        indexBuffer.GetData(indices);
+        ComputeBuffer.CopyCount(triangleBuffer, triCountBuffer, 0);
+        int[] triCountArray = { 0 };
+        triCountBuffer.GetData(triCountArray);
+        numTris = triCountArray[0];
+        triangleBuffer.GetData(triangles);
         //debugBuffer.GetData(debugs);
 
         //for (int i = 0; i < debugs.Length; i++)
@@ -106,6 +115,18 @@ public class MarchingCubes : MonoBehaviour
         if (!gameObject.GetComponent<MeshRenderer>())
             gameObject.AddComponent<MeshRenderer>();
 
+        Vector3[] vertices = new Vector3[numTris * 3];
+        int[] indices = new int[numTris * 3];
+        for (int i = 0; i < numTris; i++)
+        {
+            vertices[i * 3] = triangles[i].A;
+            vertices[i * 3 + 1] = triangles[i].B;
+            vertices[i * 3 + 2] = triangles[i].C;
+            indices[i * 3] = i * 3;
+            indices[i * 3 + 1] = i * 3 + 1;
+            indices[i * 3 + 2] = i * 3 + 2;
+        }
+
         Mesh mesh = new Mesh();
         mesh.vertices = vertices;
         mesh.triangles = indices;
@@ -122,12 +143,12 @@ public class MarchingCubes : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        GenerateMesh();
+        
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 }

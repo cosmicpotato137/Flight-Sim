@@ -17,10 +17,7 @@ public class NoiseEditor : Editor
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
-        noise.ReleaseNoiseRT();
-        noise.CreateNoiseRT();
-        noise.CalculateNoise();
-
+    
         if (GUILayout.Button("Save Texture"))
             noise.SaveTexture();
 

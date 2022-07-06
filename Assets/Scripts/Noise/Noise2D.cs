@@ -3,49 +3,41 @@ using System.IO;
 
 public abstract class Noise2D : Noise
 {
-    private void OnValidate()
-    {   
-        previewRes = 100;
-        // create preview texture 
-        previewRT = new RenderTexture(previewRes, previewRes, 0, RenderTextureFormat.ARGB32);
-        previewRT.enableRandomWrite = true;
-        previewRT.Create();
+    public Vector2 offset;
+    public Vector2 scale;
 
-        CreateShader();
+    public abstract RenderTexture CalculateNoise(Vector2 offset, Vector2 scale, int resolution);
+    public override RenderTexture CalculateNoise()
+    {
+        return CalculateNoise(offset, scale, resolution);
     }
 
     public override void CreateShader()
     {
+        string shaderName = "Scale2D";
+        ComputeShader[] compShaders = (ComputeShader[])Resources.FindObjectsOfTypeAll(typeof(ComputeShader));
+        for (int i = 0; i < compShaders.Length; i++)
+        {
+            if (compShaders[i].name == shaderName)
+            {
+                previewShader = compShaders[i];
+                break;
+            }
+        }
+
         if (previewShader && previewShader.HasKernel("Scale2D"))
             previewHandle = previewShader.FindKernel("Scale2D");
-    }
-
-    public override void CreateNoiseRT()
-    {
-        resolution = (int)Mathf.Clamp(resolution, 1, Mathf.Infinity);
-        noiseRT = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGB32);
-        noiseRT.enableRandomWrite = true;
-        noiseRT.Create();
-    }
-
-    public override void ReleaseNoiseRT()
-    {
-        if (noiseRT && noiseRT.IsCreated())
-            noiseRT.Release();
     }
 
     // convert render texture to Texture2D
     public Texture2D GetNoiseTexture()
     {
-        ReleaseNoiseRT();
-        CreateNoiseRT();
-        CalculateNoise();
-
-        RenderTexture.active = noiseRT;
+        RenderTexture oldrt = RenderTexture.active;
+        RenderTexture.active = CalculateNoise();
         Texture2D noiseTexture = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);
         noiseTexture.ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
         noiseTexture.Apply();
-        RenderTexture.active = null;
+        RenderTexture.active = oldrt;
         return noiseTexture;
     }
 
@@ -66,14 +58,13 @@ public abstract class Noise2D : Noise
 
     public override void CalculatePreview()
     {
-        CalculateNoise();
-
         if (previewShader && previewShader.HasKernel("Scale2D"))
         {
-            int numThreadGroups = Mathf.CeilToInt(previewRes / 8.0f);
-            previewShader.SetTexture(previewHandle, "Input", noiseRT); 
+            previewShader.SetTexture(previewHandle, "Input", CalculateNoise());
             previewShader.SetTexture(previewHandle, "Result", previewRT);
-            previewShader.Dispatch(previewHandle, numThreadGroups, numThreadGroups, 1);
+            uint kx = 0, ky = 0, kz = 0;
+            noiseShader.GetKernelThreadGroupSizes(previewHandle, out kx, out ky, out kz);
+            previewShader.Dispatch(previewHandle, (int)(previewRes / kx) + 1, (int)(previewRes / ky) + 1, 1);
         }
     }
 

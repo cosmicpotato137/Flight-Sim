@@ -5,19 +5,24 @@
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 
-RWTexture3D<float4> noiseTexture;
+struct Triangle {
+    float3 A;
+    float3 B;
+    float3 C;
+};
 
-RWStructuredBuffer<float3> vertices;
-RWStructuredBuffer<int> indices;
+RWTexture3D<float4> noiseTexture;
+AppendStructuredBuffer<Triangle> triangles;
 //RWStructuredBuffer<float4x4> debug;
 
+float3 scale;
 int xdim;
 int ydim;
 int zdim;
 
 float isoLevel;
 
-float3 interpolateVerts(float4 v1, float4 v2) 
+float3 interpolateVerts(float4 v1, float4 v2)
 {
     float t = (isoLevel - v1.w) / (v2.w - v1.w);
     return v1.xyz + t * (v2.xyz - v1.xyz);
@@ -38,24 +43,22 @@ void MarchingCubes(int bufferIndex, int cubeIndex, float4 cubeCorners[8], bool e
         int a2 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 2]];
         int b2 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 2]];
 
-
-        vertices[i + bufferIndex * 15 + 1] = interpolateVerts(cubeCorners[a1], cubeCorners[b1]);
-        vertices[i + bufferIndex * 15 + 2] = interpolateVerts(cubeCorners[a2], cubeCorners[b2]);
-        vertices[i + bufferIndex * 15 + 0] = interpolateVerts(cubeCorners[a0], cubeCorners[b0]);
-        indices[i + bufferIndex * 15 + 0] = i + bufferIndex * 15 + 0;
-        indices[i + bufferIndex * 15 + 1] = i + bufferIndex * 15 + 1;
-        indices[i + bufferIndex * 15 + 2] = i + bufferIndex * 15 + 2;
+        Triangle t;
+        t.A = interpolateVerts(cubeCorners[a1], cubeCorners[b1]) * scale;
+        t.B = interpolateVerts(cubeCorners[a2], cubeCorners[b2]) * scale;
+        t.C = interpolateVerts(cubeCorners[a0], cubeCorners[b0]) * scale;
+        triangles.Append(t);
     }
 }
 
-[numthreads(8,8,8)]
-void MeshGen (uint3 id : SV_DispatchThreadID)
+[numthreads(10, 10, 10)]
+void MeshGen(uint3 id : SV_DispatchThreadID)
 {
     uint width = 0;
     uint height = 0;
     uint depth = 0;
     noiseTexture.GetDimensions(width, height, depth);
-    if (id.y >= ydim || id.x >= ydim || id.z >= zdim) return;
+    if (id.y >= ydim || id.x >= xdim || id.z >= zdim) return;
 
     // calculate texture indices
     float ld = max((float)xdim, max((float)ydim, (float)zdim));

@@ -10,16 +10,26 @@ public class Noise3DDrawer : NoiseDrawer
         totalHeight += (EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing) * 2;
         return totalHeight;
     }
-    protected override float PreviewTextureGUI(Rect position, float y, Noise config)
+
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        y = base.PreviewTextureGUI(position, y, config);
-        Noise3D noise3D = config as Noise3D;
+        base.OnGUI(position, property, label);
+        float y = base.GetPropertyHeight(property, label);
 
-        noise3D.axis = EditorGUI.IntSlider(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight), "Axis", noise3D.axis, 0, 2);
-        y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
-        noise3D.layer = EditorGUI.IntSlider(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight), "Layer", noise3D.layer, 1, config.resolution);
-        y += EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
-
-        return y;
+        if (property.isExpanded && property.objectReferenceValue)
+        {
+            Noise3D noise3D = property.objectReferenceValue as Noise3D;
+            noise3D.axis = EditorGUI.IntSlider(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight), "Axis", noise3D.axis, 0, 2);
+            y = NextLine(y);
+            noise3D.layer = EditorGUI.IntSlider(new Rect(position.x, y, position.width, EditorGUIUtility.singleLineHeight), "Layer", noise3D.layer, 1, noise3D.resolution);
+            y = NextLine(y);
+        }
     }
+
+    //protected override float PreviewTextureGUI(Rect position, float y, Noise config)
+    //{
+    //    y = base.PreviewTextureGUI(position, y, config);
+
+    //    return y;
+    //}
 }
