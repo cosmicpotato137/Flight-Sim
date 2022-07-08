@@ -58,6 +58,11 @@ public abstract class Noise2D : Noise
 
     public override void CalculatePreview()
     {
+        if (!previewRT)
+        {
+            CreatePreviewRT();
+        }
+
         if (previewShader && previewShader.HasKernel("Scale2D"))
         {
             previewShader.SetTexture(previewHandle, "Input", CalculateNoise());

@@ -10,6 +10,8 @@ public class VecValEditor : MonoBehaviour, IDragHandler
     TMP_InputField tm;
     float current = 0f;
 
+    Vector2 cp;
+
     // Start is called before the first frame update
     void Awake()
     {
@@ -36,7 +38,7 @@ public class VecValEditor : MonoBehaviour, IDragHandler
 
     public void OnDrag(PointerEventData eventData)
     {
-        current += eventData.delta.x * .1f;
+        current += eventData.delta.x * .05f;
         tm.text = string.Format("{0:N3}", current);
         eventData.Use();
     }
