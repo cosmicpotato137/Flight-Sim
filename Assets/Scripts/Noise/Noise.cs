@@ -23,21 +23,25 @@ public abstract class Noise : ScriptableObject
 
     private void OnEnable()
     {
-        previewRes = 150;
-        // create preview texture 
-        previewRT = new RenderTexture(previewRes, previewRes, 0, RenderTextureFormat.ARGB32);
-        previewRT.enableRandomWrite = true;
-        previewRT.Create();
+        CreatePreviewRT();
         CreateShader();
         CalculatePreview();
     }
 
     private void OnValidate()
     {
-        Mathf.Clamp(resolution, 1, Mathf.Infinity);
-        Mathf.Clamp(previewRes, 1, Mathf.Infinity);
+        resolution = (int)Mathf.Clamp(resolution, 1, Mathf.Infinity);
+        previewRes = (int)Mathf.Clamp(previewRes, 1, Mathf.Infinity);
     }
 
+    public void CreatePreviewRT()
+    {
+        previewRes = 150;
+        // create preview texture 
+        previewRT = new RenderTexture(previewRes, previewRes, 0, RenderTextureFormat.ARGB32);
+        previewRT.enableRandomWrite = true;
+        previewRT.Create();
+    }
     public abstract void CreateShader();
     public abstract void CalculatePreview();
     public abstract RenderTexture CalculateNoise();

@@ -66,6 +66,10 @@ public abstract class Noise3D : Noise
 
     public override void CalculatePreview()
     {
+        if (!previewRT)
+        {
+            CreatePreviewRT();
+        }
         if (previewHandle != -1)
         {
             previewShader.SetTexture(previewHandle, "Volume", CalculateNoise());
