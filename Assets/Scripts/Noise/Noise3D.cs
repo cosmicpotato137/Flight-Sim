@@ -15,7 +15,7 @@ public abstract class Noise3D : Noise
     {
         return CalculateNoise(offset, scale, resolution);
     }
-
+     
     public override void CreateShader()
     {
         string shaderName = "SliceVolume";

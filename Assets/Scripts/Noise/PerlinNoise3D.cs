@@ -26,7 +26,7 @@ public class PerlinNoise3D : Noise3D
         if (!(noiseShader && noiseShader.HasKernel("PerlinNoise3D"))) return result;
 
         //scale = new Vector3(Mathf.Clamp(scale.x, 0, Mathf.Infinity), Mathf.Clamp(scale.y, 0, Mathf.Infinity), Mathf.Clamp(scale.z, 0, Mathf.Infinity));
-        scale = scale * (float)resolution / 5.0f; // keep scale of noise constant with changing resolution
+        scale = scale * (float)resolution; // keep scale of noise constant with changing resolution
         noiseShader.SetTexture(shaderHandle, "Result", result);
         noiseShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
         noiseShader.SetFloats("offset", new float[] { offset.x, offset.y, offset.z });
