@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 public class HeightMap : MonoBehaviour
 {
     public ComputeShader mcShader;
-    public NoiseAdder2D noise;
+    public Noise2D noise;
     int mcShaderID;
 
     public Vector3 scale;

@@ -25,7 +25,7 @@ public class PerlinNoise2D : Noise2D
 
         if (noiseShader && noiseShader.HasKernel("PerlinNoise2D"))
         {
-            scale = scale * (float)resolution / 5.0f; // keep scale of noise constant with changing resolution
+            scale = scale * (float)resolution; // keep scale of noise constant with changing resolution
             noiseShader.SetTexture(shaderHandle, "Result", result);
             noiseShader.SetFloats("scale", new float[]{ scale.x, scale.y });
             noiseShader.SetFloats("offset", new float[]{ offset.x, offset.y });
@@ -39,10 +39,5 @@ public class PerlinNoise2D : Noise2D
         }
 
         return result;
-    }
-
-    public override RenderTexture CalculateNoise()
-    {
-        return CalculateNoise(offset, scale, resolution);
     }
 }
