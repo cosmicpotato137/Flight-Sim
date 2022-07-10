@@ -6,9 +6,9 @@ using UnityEngine;
 public class PerlinNoise2D : Noise2D
 {
     public int seed;
+    public float weight;
     [Range(0f, 1f)]
     public float alpha;
-    public float weight;
 
     public override void CreateShader()
     {

@@ -147,5 +147,5 @@ void PerlinNoise3D(uint3 id : SV_DispatchThreadID)
     // TODO: insert actual code here!
     float v = perlin(id.x, id.y, id.z, offset, scale, seed) * noiseWeight + 0.5;
     //v = randomGradient(id.x / scale.x + offset.x, id.y / scale.y + offset.y).x;
-    Result[id.xyz] = float4(v, v, v, 1);
+    Result[id.xyz] = float4(v, v, v, alpha);
 }

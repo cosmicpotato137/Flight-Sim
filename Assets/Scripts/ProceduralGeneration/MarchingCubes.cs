@@ -13,7 +13,7 @@ struct Triangle
 public class MarchingCubes : MonoBehaviour
 {
     public ComputeShader mcShader;
-    public PerlinNoise3D noise;
+    public Noise3D noise;
     int mcShaderID;
 
     public Vector3 scale;
@@ -22,6 +22,7 @@ public class MarchingCubes : MonoBehaviour
     public int xdim = 5;
     public int ydim = 5;
     public int zdim = 5;
+    [Range(0, 1)]
     public float threshold = .5f;
     public bool realtimeGeneration;
 

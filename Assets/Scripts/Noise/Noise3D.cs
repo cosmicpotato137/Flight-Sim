@@ -5,6 +5,7 @@ public abstract class Noise3D : Noise
 {
     public Vector3 offset;
     public Vector3 scale;
+
     [HideInInspector]
     public int axis;
     [HideInInspector]

@@ -73,14 +73,14 @@ void MeshGen(uint3 id : SV_DispatchThreadID)
 
     // assign weights of texture
     float4 cubeCorners[8] = {
-        float4(id.x, id.y, id.z, noiseTexture[tid1].x),
-        float4(id.x + 1, id.y, id.z, noiseTexture[tid2].x),
-        float4(id.x + 1, id.y, id.z + 1, noiseTexture[tid3].x),
-        float4(id.x, id.y, id.z + 1, noiseTexture[tid4].x),
-        float4(id.x, id.y + 1, id.z, noiseTexture[tid5].x),
-        float4(id.x + 1, id.y + 1, id.z, noiseTexture[tid6].x),
-        float4(id.x + 1, id.y + 1, id.z + 1, noiseTexture[tid7].x),
-        float4(id.x, id.y + 1, id.z + 1, noiseTexture[tid8].x)
+        float4(id.x, id.y, id.z,                noiseTexture[tid1].x * noiseTexture[tid1].w),
+        float4(id.x + 1, id.y, id.z,            noiseTexture[tid2].x * noiseTexture[tid2].w),
+        float4(id.x + 1, id.y, id.z + 1,        noiseTexture[tid3].x * noiseTexture[tid3].w),
+        float4(id.x, id.y, id.z + 1,            noiseTexture[tid4].x * noiseTexture[tid4].w),
+        float4(id.x, id.y + 1, id.z,            noiseTexture[tid5].x * noiseTexture[tid5].w),
+        float4(id.x + 1, id.y + 1, id.z,        noiseTexture[tid6].x * noiseTexture[tid6].w),
+        float4(id.x + 1, id.y + 1, id.z + 1,    noiseTexture[tid7].x * noiseTexture[tid7].w),
+        float4(id.x, id.y + 1, id.z + 1,        noiseTexture[tid8].x * noiseTexture[tid8].w)
     };
 
     // Calculate unique index for each cube configuration.

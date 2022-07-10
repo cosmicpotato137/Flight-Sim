@@ -103,7 +103,16 @@ public class NoiseDrawer : PropertyDrawer
                             if (prop.name == "alpha")
                                 prop.floatValue = EditorGUI.Slider(pos, prop.displayName, prop.floatValue, 0, 1);
                             else
-                                EditorGUI.PropertyField(pos, prop, true);
+                            {
+                                try
+                                {
+                                    EditorGUI.PropertyField(pos, prop, true);
+                                }
+                                catch (InvalidOperationException)
+                                {
+                                    continue;
+                                }
+                            }
                             y += height + EditorGUIUtility.standardVerticalSpacing;
                         }
                     }

@@ -7,6 +7,8 @@ public class PerlinNoise3D : Noise3D
 {
     public float weight;
     public uint seed;
+    [Range(0f, 1f)]
+    public float alpha;
 
     public override void CreateShader()
     {
@@ -30,6 +32,7 @@ public class PerlinNoise3D : Noise3D
         noiseShader.SetTexture(shaderHandle, "Result", result);
         noiseShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
         noiseShader.SetFloats("offset", new float[] { offset.x, offset.y, offset.z });
+        noiseShader.SetFloat("alpha", alpha);
         noiseShader.SetFloat("noiseWeight", weight);
         noiseShader.SetInt("seed", (int)seed);
 
