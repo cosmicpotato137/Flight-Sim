@@ -14,7 +14,6 @@ public class HeightMap : MonoBehaviour
     public Vector2 mapSize;
     public Vector2 chunkSize = new Vector2(100, 100);
     public bool realtimeGeneration;
-    public Vector2 offset;
 
     int mcShaderID;
     RenderTexture heightmapBuffer;
@@ -121,13 +120,12 @@ public class HeightMap : MonoBehaviour
                     g = children[chunkIndex].gameObject;
                     g.name = name;
                 }
-                g.transform.position = Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, 0), scale);
-                g.transform.rotation = Quaternion.identity;
-                //g.transform.position = transform.rotation * transform.up * x * chunkSize.x + transform.rotation * transform.forward * y * chunkSize.y;
+                g.transform.rotation = transform.rotation;
+                g.transform.position = transform.rotation * Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, 0), scale);
 
                 // get heightmap
                 int res = (int)Mathf.Max(chunkSize.x, chunkSize.y) + 1;
-                offset = new Vector2(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res));
+                Vector2 offset = new Vector2(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res));
                 heightmapBuffer = noise.CalculateNoise(noise.offset + new Vector2(x, y) * offset, noise.scale, res);
                 InitShader();
                 DispatchShader();
@@ -145,13 +143,13 @@ public class HeightMap : MonoBehaviour
                 //Debug.Log(chunkIndex);
             }
         }
+        ReleaseBuffers();
 
         for (int i = children.Count; i > chunkIndex + 1; i--)
         {
             DestroyImmediate(children[chunkIndex + 1].gameObject);
             children.RemoveAt(chunkIndex + 1);
         }
-        ReleaseBuffers();
     }
 
     public void ClearMesh()
