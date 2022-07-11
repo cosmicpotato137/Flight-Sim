@@ -43,10 +43,11 @@ void MeshGen(uint3 id : SV_DispatchThreadID)
     int triInd = (id.x + id.y * colCount) * 6;
 
     // get height from texture
-    uint2 hid1 = uint2((float)id.x / (float)colCount * (float)(width - 1), (float)id.y / (float)rowCount * (float)(height - 1));
-    uint2 hid2 = uint2((float)(id.x + 1) / (float)colCount * (float)(width - 1), (float)id.y / (float)rowCount * (float)(height - 1));
-    uint2 hid3 = uint2((float)id.x / (float)colCount * (float)(width - 1), (float)(id.y + 1) / (float)rowCount * (float)(height - 1));
-    uint2 hid4 = uint2((float)(id.x + 1) / (float)colCount * (float)(width - 1), (float)(id.y + 1) / (float)rowCount * (float)(height - 1));
+    float ld = max(max((float)colCount, (float)rowCount), 1);
+    uint2 hid1 = uint2((float)id.x / (float)ld * (float)width, (float)id.y / (float)ld * (float)height);
+    uint2 hid2 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)id.y / (float)ld * (float)height);
+    uint2 hid3 = uint2((float)id.x / (float)ld * (float)width, (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
+    uint2 hid4 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
     float4 heights = float4(
         heightmap[hid1].x * heightmap[hid1].w,
         heightmap[hid2].x * heightmap[hid2].w,
@@ -54,5 +55,6 @@ void MeshGen(uint3 id : SV_DispatchThreadID)
         heightmap[hid4].x * heightmap[hid4].w
         );
 
+    debug[(id.x + id.y * colCount) * 4] = float4(hid1.x, hid2.x, heights[0], 0);
     CreateTri(triInd, id.x, id.y, heights);
 }

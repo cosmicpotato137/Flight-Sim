@@ -8,13 +8,15 @@ public class HeightMap : MonoBehaviour
 {
     public ComputeShader mcShader;
     public Noise2D noise;
-    int mcShaderID;
+    public Material material;
 
     public Vector3 scale;
-    public int xdim;
-    public int ydim;
+    public Vector2 mapSize;
+    public Vector2 chunkSize = new Vector2(100, 100);
     public bool realtimeGeneration;
+    public Vector2 offset;
 
+    int mcShaderID;
     RenderTexture heightmapBuffer;
     ComputeBuffer vertexBuffer;
     Vector3[] vertices;
@@ -23,25 +25,26 @@ public class HeightMap : MonoBehaviour
     ComputeBuffer debugBuffer;
     Vector4[] debugs;
 
-    Material material;
+    List<Transform> children;
+
+    private void Start()
+    {
+        GenerateMesh();
+    }
 
     private void OnValidate()
     {
-        xdim = (int)Mathf.Clamp(xdim, 1, Mathf.Infinity);
-        ydim = (int)Mathf.Clamp(ydim, 1, Mathf.Infinity);
-
+        mapSize = new Vector2(Mathf.Ceil(mapSize.x), Mathf.Ceil(mapSize.y));
+        chunkSize = new Vector2(Mathf.Ceil(chunkSize.x), Mathf.Ceil(chunkSize.y));
     }
 
     public void InitBuffers()
     {
         // setup local arrays
-        int triCount = xdim * ydim;
+        int triCount = (int)chunkSize.x * (int)chunkSize.y;
         vertices = new Vector3[triCount * 6];
         indices = new int[triCount * 6];
         debugs = new Vector4[triCount];
-
-        // get heightmap
-        heightmapBuffer = noise.CalculateNoise(noise.offset, noise.scale, Mathf.Max(xdim, ydim));
 
         // setup GPU buffers
         vertexBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
@@ -67,16 +70,15 @@ public class HeightMap : MonoBehaviour
         mcShader.SetBuffer(mcShaderID, "indices", indexBuffer);
         mcShader.SetBuffer(mcShaderID, "debug", debugBuffer);
         mcShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
-        mcShader.SetInt("colCount", xdim);
-        mcShader.SetInt("rowCount", ydim);
+        mcShader.SetInt("colCount", (int)chunkSize.x);
+        mcShader.SetInt("rowCount", (int)chunkSize.y);
     }
 
     public void DispatchShader()
     {
-
         uint kx = 0, ky = 0, kz = 0;
         mcShader.GetKernelThreadGroupSizes(mcShaderID, out kx, out ky, out kz);
-        mcShader.Dispatch(mcShaderID, (int)(xdim / kx) + 1, (int)(ydim / ky) + 1, 1);
+        mcShader.Dispatch(mcShaderID, (int)(chunkSize.x / kx) + 1, (int)(chunkSize.y / ky) + 1, 1);
 
         // get data from GPU
         vertexBuffer.GetData(vertices);
@@ -91,34 +93,71 @@ public class HeightMap : MonoBehaviour
 
     public void GenerateMesh()
     {
+
         InitBuffers();
-        InitShader();
-        DispatchShader();
+        List<Transform> children = new List<Transform>(gameObject.GetComponentsInChildren<Transform>(false));
+        if (children.Contains(this.transform))
+            children.Remove(this.transform);
+
+        int chunkIndex = 0;
+        for (int y = 0; y < mapSize.y; y++)
+        {
+            for (int x = 0; x < mapSize.x; x++)
+            {
+                chunkIndex = x + (int)mapSize.x * y;
+                string name = string.Format("chunk ({0},{1})", x, y);
+                GameObject g;
+                // make chunk if it doesn't exist
+                if (chunkIndex >= children.Count)
+                {
+                    g = new GameObject(name);
+                    g.transform.SetParent(transform);
+                    g.AddComponent<MeshFilter>();
+                    g.AddComponent<MeshRenderer>();
+                    children.Add(g.transform);
+                }
+                else
+                {
+                    g = children[chunkIndex].gameObject;
+                    g.name = name;
+                }
+                g.transform.position = Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, 0), scale);
+                g.transform.rotation = Quaternion.identity;
+                //g.transform.position = transform.rotation * transform.up * x * chunkSize.x + transform.rotation * transform.forward * y * chunkSize.y;
+
+                // get heightmap
+                int res = (int)Mathf.Max(chunkSize.x, chunkSize.y) + 1;
+                offset = new Vector2(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res));
+                heightmapBuffer = noise.CalculateNoise(noise.offset + new Vector2(x, y) * offset, noise.scale, res);
+                InitShader();
+                DispatchShader();
+
+                // set mesh
+                Mesh mesh = new Mesh();
+                mesh.vertices = vertices;
+                mesh.triangles = indices;
+                mesh.Optimize();
+                mesh.RecalculateNormals();
+                g.GetComponent<MeshFilter>().mesh = mesh;
+
+                g.GetComponent<Renderer>().material = material;
+
+                //Debug.Log(chunkIndex);
+            }
+        }
+
+        for (int i = children.Count; i > chunkIndex + 1; i--)
+        {
+            DestroyImmediate(children[chunkIndex + 1].gameObject);
+            children.RemoveAt(chunkIndex + 1);
+        }
         ReleaseBuffers();
-
-        // make mesh
-        if (!gameObject.GetComponent<MeshFilter>())
-            gameObject.AddComponent<MeshFilter>();
-        if (!gameObject.GetComponent<MeshRenderer>())
-            gameObject.AddComponent<MeshRenderer>();
-
-        Mesh mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.triangles = indices;
-        mesh.Optimize();
-        mesh.RecalculateNormals();
-        GetComponent<MeshFilter>().mesh = mesh;
     }
 
     public void ClearMesh()
     {
-        GetComponent<MeshFilter>().mesh = new Mesh();
-    }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        GenerateMesh();
+        for (int i = this.transform.childCount; i > 0; --i)
+            DestroyImmediate(this.transform.GetChild(0).gameObject);
     }
 
     // Update is called once per frame

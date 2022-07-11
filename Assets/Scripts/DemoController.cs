@@ -40,7 +40,7 @@ public class DemoController : MonoBehaviour
             mc.GenerateMesh();
         } else if (mode == "2D")
         {
-            hm.xdim = hm.ydim = (int)resolutionUI.value;
+            hm.chunkSize = new Vector3(resolutionUI.value, resolutionUI.value);
             hm.noise.resolution = (int)resolutionUI.value;
             Vector2 newscale = hm.scale * (resolutionUI.maxValue / resolutionUI.value);
             hm.gameObject.transform.localScale = new Vector3(newscale.x, newscale.y, 1);

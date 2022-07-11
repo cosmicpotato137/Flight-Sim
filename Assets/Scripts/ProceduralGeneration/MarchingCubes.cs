@@ -49,8 +49,7 @@ public class MarchingCubes : MonoBehaviour
         triangles = new Triangle[maxTris * 5];
         //debugs = new Matrix4x4[triCount];
 
-        
-        heightmapBuffer = noise.CalculateNoise();
+        heightmapBuffer = noise.CalculateNoise(noise.offset, noise.scale, Mathf.Max(xdim, Mathf.Max(ydim, zdim)) + 1);
 
         // setup GPU buffers
         triangleBuffer = new ComputeBuffer(triangles.Length, sizeof(float) * 9, ComputeBufferType.Append);
