@@ -1,0 +1,60 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel MeshGen
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+Texture2D<float4> heightmap;
+
+RWStructuredBuffer<float3> vertices;
+RWStructuredBuffer<int> indices;
+float3 scale;
+uint colCount;
+uint rowCount;
+
+RWStructuredBuffer<float4> debug;
+
+
+void CreateTri(int triInd, int x, int y, float4 heights)
+{
+    vertices[triInd + 0] = float3(x, y, heights[0]) * scale;
+    vertices[triInd + 1] = float3(x, y + 1, heights[2]) * scale;
+    vertices[triInd + 2] = float3(x + 1, y, heights[1]) * scale;
+    vertices[triInd + 3] = float3(x, y + 1, heights[2]) * scale;
+    vertices[triInd + 4] = float3(x + 1, y + 1, heights[3]) * scale;
+    vertices[triInd + 5] = float3(x + 1, y, heights[1]) * scale;
+
+    indices[triInd + 0] = triInd + 0;
+    indices[triInd + 1] = triInd + 1;
+    indices[triInd + 2] = triInd + 2;
+    indices[triInd + 3] = triInd + 3;
+    indices[triInd + 4] = triInd + 4;
+    indices[triInd + 5] = triInd + 5;
+}
+
+[numthreads(10, 10, 1)]
+void MeshGen(uint3 id : SV_DispatchThreadID)
+{
+    uint width = 0;
+    uint height = 0;
+    heightmap.GetDimensions(width, height);
+    if (id.y >= rowCount || id.x >= colCount) return;
+
+    int triInd = (id.x + id.y * colCount) * 6;
+
+    // get height from texture
+    float ld = max(max((float)colCount, (float)rowCount), 1);
+    uint2 hid1 = uint2((float)id.x / (float)ld * (float)width, (float)id.y / (float)ld * (float)height);
+    uint2 hid2 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)id.y / (float)ld * (float)height);
+    uint2 hid3 = uint2((float)id.x / (float)ld * (float)width, (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
+    uint2 hid4 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
+    float4 heights = float4(
+        heightmap[hid1].x * heightmap[hid1].w,
+        heightmap[hid2].x * heightmap[hid2].w,
+        heightmap[hid3].x * heightmap[hid3].w,
+        heightmap[hid4].x * heightmap[hid4].w
+        );
+
+    debug[(id.x + id.y * colCount) * 4] = float4(hid1.x, hid2.x, heights[0], 0);
+    CreateTri(triInd, id.x, id.y, heights);
+}
