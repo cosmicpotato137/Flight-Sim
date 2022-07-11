@@ -34,13 +34,13 @@ public class DemoController : MonoBehaviour
     {
         if (mode == "3D")
         {
-            mc.xdim = mc.ydim = mc.zdim = (int)resolutionUI.value;
+            mc.chunkSize = new Vector3(resolutionUI.value, resolutionUI.value, resolutionUI.value);
             mc.noise.resolution = (int)resolutionUI.value;
             mc.gameObject.transform.localScale = mc.scale * (resolutionUI.maxValue / resolutionUI.value);
             mc.GenerateMesh();
         } else if (mode == "2D")
         {
-            hm.chunkSize = new Vector3(resolutionUI.value, resolutionUI.value);
+            hm.chunkSize = new Vector2(resolutionUI.value, resolutionUI.value);
             hm.noise.resolution = (int)resolutionUI.value;
             Vector2 newscale = hm.scale * (resolutionUI.maxValue / resolutionUI.value);
             hm.gameObject.transform.localScale = new Vector3(newscale.x, newscale.y, 1);

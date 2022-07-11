@@ -104,7 +104,7 @@ public class HeightMap : MonoBehaviour
             for (int x = 0; x < mapSize.x; x++)
             {
                 chunkIndex = x + (int)mapSize.x * y;
-                string name = string.Format("chunk ({0},{1})", x, y);
+                string name = string.Format("chunk ({0}, {1})", x, y);
                 GameObject g;
                 // make chunk if it doesn't exist
                 if (chunkIndex >= children.Count)
