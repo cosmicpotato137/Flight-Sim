@@ -25,8 +25,7 @@ float interpolate(float a0, float a1, float w) {
 
 }
 
-/* Create random direction vector
- */
+// Create random direction vector
 float3 randomGradient(int3 ipos, int seed) {
     float3 random;
     random.x = sin(ipos.x * 21942.f + ipos.y * 171324.f + ipos.z * 2853290.f + 8912.f) * cos(ipos.x * 23157.f * ipos.y * 217832.f + ipos.z * 9532901.f + 9758.f);
@@ -47,7 +46,7 @@ float dotGridGradient(int3 ipos, float3 pos, float3 gradient) {
     // Compute the dot-product
     return (dx * gradient.x + dy * gradient.y + dz * gradient.z);
 }
-//
+
 //float3 randomGradient(int3 ipos, int seed) {
 //    float2 random = float2(sin(ipos.x * 21942.f + ipos.y * 171324.f + 8912.f), cos(ipos.x * 23157.f * ipos.y * 217832.f + 9758.f)) * 2920.f;
 //    float r = dot(random, float2(seed, seed));
