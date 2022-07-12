@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 
+/// <summary>
+/// Opperates on a list of noises
+/// </summary>
 [CreateAssetMenu(fileName = "New 2D Noise Adder", menuName = "Noise/2D Noise Adder")]
 public class NoiseAdder2D : Noise2D
 {

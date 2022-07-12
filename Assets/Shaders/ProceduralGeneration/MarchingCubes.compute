@@ -97,6 +97,7 @@ void MeshGen(uint3 id : SV_DispatchThreadID)
     if (cubeCorners[6].w < isoLevel) cubeIndex |= 64;
     if (cubeCorners[7].w < isoLevel) cubeIndex |= 128;
 
+    // find triangle buffer index
     int bufferIndex = id.z * zdim * ydim + id.y * ydim + id.x;
     MarchingCubes(bufferIndex, cubeIndex, cubeCorners, false);
 }

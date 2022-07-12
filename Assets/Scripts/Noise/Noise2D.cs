@@ -1,11 +1,18 @@
 using UnityEngine;
 using System.IO;
 
+/// <summary>
+/// 2D noise base class
+/// </summary>
 public abstract class Noise2D : Noise
 {
-    public Vector2 offset;
-    public Vector2 scale;
+    public Vector2 offset = new Vector2(0, 0);  // noise texture offset
+    public Vector2 scale = new Vector2(1, 1);   // noise scale
 
+    /// <param name="offset"></param>
+    /// <param name="scale"></param>
+    /// <param name="resolution"></param>
+    /// <returns>Calculated noise texture</returns>
     public abstract RenderTexture CalculateNoise(Vector2 offset, Vector2 scale, int resolution);
     public override RenderTexture CalculateNoise()
     {
@@ -14,6 +21,7 @@ public abstract class Noise2D : Noise
 
     public override void CreateShader()
     {
+        // look for the correct preview shader in all assets
         string shaderName = "Scale2D";
         ComputeShader[] compShaders = (ComputeShader[])Resources.FindObjectsOfTypeAll(typeof(ComputeShader));
         for (int i = 0; i < compShaders.Length; i++)
@@ -29,23 +37,34 @@ public abstract class Noise2D : Noise
             previewHandle = previewShader.FindKernel("Scale2D");
     }
 
-    // convert render texture to Texture2D
+    /// <summary>
+    /// Convert render texture to Texture2D
+    /// </summary>
+    /// <returns>Noise Texture2D</returns>
     public Texture2D GetNoiseTexture()
     {
+        // save active RenderTexture
         RenderTexture oldrt = RenderTexture.active;
         RenderTexture.active = CalculateNoise();
+
+        // Read from pixels
         Texture2D noiseTexture = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);
         noiseTexture.ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
         noiseTexture.Apply();
+
+        // re-activate old render texture
         RenderTexture.active = oldrt;
+
         return noiseTexture;
     }
 
     public override void SaveTexture()
     {
-        // RenderTexture -> Texture2D -> byte[]
+        // get noise texture 
         byte[] bytes = GetNoiseTexture().EncodeToPNG();
         Directory.CreateDirectory(Application.dataPath + "/Textures/");
+
+        // save texture to a new file
         int count = 0;
         string countStr = "";
         while (File.Exists(Application.dataPath + "/Textures/NoiseTexture2D" + countStr + ".png"))
@@ -58,6 +77,7 @@ public abstract class Noise2D : Noise
 
     public override void CalculatePreview()
     {
+        // init preview
         if (!previewRT)
         {
             CreatePreviewRT();

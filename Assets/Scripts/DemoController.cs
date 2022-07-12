@@ -6,15 +6,15 @@ using UnityEngine.UI;
 
 public class DemoController : MonoBehaviour
 {
-    public MarchingCubes mc;
-    public HeightMap hm;
+    public MarchingCubes mc;        // 3D mesh generator
+    public HeightMap hm;            // 2D mesh generator
 
-    public Slider resolutionUI;
-    public VectorEditor offsetUI;
-    public VectorEditor scaleUI;
-    public Button switchUI;
+    public Slider resolutionUI;     // resolution slider
+    public VectorEditor offsetUI;   // offset vector editor
+    public VectorEditor scaleUI;    // scale vector editor
+    public Button switchUI;         // switch-modes button
 
-    string mode = "3D";
+    string mode = "3D";             // current mode
 
     private void Start()
     {
@@ -30,6 +30,9 @@ public class DemoController : MonoBehaviour
             Application.Quit();
     }
 
+    /// <summary>
+    /// Update the mesh generators with the current resolution
+    /// </summary>
     public void ChangeResolution()
     {
         if (mode == "3D")
@@ -48,6 +51,9 @@ public class DemoController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update the mesh generators with the current offset
+    /// </summary>
     public void ChangeOffset()
     {
         if (mode == "3D")
@@ -64,6 +70,9 @@ public class DemoController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Update the mesh generators with the current scale
+    /// </summary>
     public void ChangeScale()
     {
         if (mode == "3D") 
@@ -81,6 +90,9 @@ public class DemoController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Switch between 3D and 2D mesh generators
+    /// </summary>
     public void SwitchModes()
     {
         string text = switchUI.GetComponentInChildren<TextMeshProUGUI>().text;
