@@ -1,3 +1,4 @@
+using cosmicpotato.noisetools.Editor;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,7 +8,6 @@ using UnityEngine.Rendering;
 public class HeightMap : MonoBehaviour
 {
     public ComputeShader hmShader;  // heightmap compute shader
-    public Noise2D noise;           // noise function 
     public Material material;       // material of map
 
     public Vector3 scale = new Vector3(1, 1, 1);        // scale of map
@@ -15,6 +15,8 @@ public class HeightMap : MonoBehaviour
     public int maxChunkSize = 10000;                    // max chunk area
     public Vector2 chunkSize = new Vector2(100, 100);   // size of chunks
     public bool realtimeGeneration = false;             // update mesh as values are changed in the inspector
+
+    [HideInInspector] public Noise2D noise;             // noise function 
 
     int mcShaderID;                 // shader id
     RenderTexture heightmapBuffer;  // heightmap render texture
@@ -130,6 +132,7 @@ public class HeightMap : MonoBehaviour
                 // set transform
                 g.transform.rotation = transform.rotation;
                 g.transform.position = transform.rotation * Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, 0), scale);
+                g.transform.position += transform.position;
 
                 // get heightmap
                 int res = (int)Mathf.Max(chunkSize.x, chunkSize.y) + 1;

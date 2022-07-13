@@ -2,9 +2,7 @@
 #pragma kernel MeshGen
 #include "/Includes/MarchTables.compute"
 
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
-
+// Generate mesh using the marching cubes algorithm
 struct Triangle {
     float3 A;
     float3 B;
@@ -13,15 +11,15 @@ struct Triangle {
 
 RWTexture3D<float4> noiseTexture;
 AppendStructuredBuffer<Triangle> triangles;
-//RWStructuredBuffer<float4x4> debug;
 
+float isoLevel;
 float3 scale;
 int xdim;
 int ydim;
 int zdim;
 
-float isoLevel;
 
+// interpolate between corners of a voxel based on the weights of the textuere
 float3 interpolateVerts(float4 v1, float4 v2)
 {
     float t = (isoLevel - v1.w) / (v2.w - v1.w);
@@ -43,6 +41,7 @@ void MarchingCubes(int bufferIndex, int cubeIndex, float4 cubeCorners[8], bool e
         int a2 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 2]];
         int b2 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 2]];
 
+        // append triangle to buffer
         Triangle t;
         t.A = interpolateVerts(cubeCorners[a1], cubeCorners[b1]) * scale;
         t.B = interpolateVerts(cubeCorners[a2], cubeCorners[b2]) * scale;
@@ -54,6 +53,7 @@ void MarchingCubes(int bufferIndex, int cubeIndex, float4 cubeCorners[8], bool e
 [numthreads(10, 10, 10)]
 void MeshGen(uint3 id : SV_DispatchThreadID) 
 {
+    // get dimensions of texture
     uint width = 0;
     uint height = 0;
     uint depth = 0;

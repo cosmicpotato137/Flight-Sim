@@ -1,9 +1,7 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel MeshGen
 
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
-
+// Generate mesh given a Texture2D heightmap
 Texture2D<float4> heightmap;
 
 RWStructuredBuffer<float3> vertices;
@@ -12,11 +10,9 @@ float3 scale;
 uint colCount;
 uint rowCount;
 
-RWStructuredBuffer<float4> debug;
-
-
 void CreateTri(int triInd, int x, int y, float4 heights)
 {
+    // set vertices
     vertices[triInd + 0] = float3(x, y, heights[0]) * scale;
     vertices[triInd + 1] = float3(x, y + 1, heights[2]) * scale;
     vertices[triInd + 2] = float3(x + 1, y, heights[1]) * scale;
@@ -24,6 +20,7 @@ void CreateTri(int triInd, int x, int y, float4 heights)
     vertices[triInd + 4] = float3(x + 1, y + 1, heights[3]) * scale;
     vertices[triInd + 5] = float3(x + 1, y, heights[1]) * scale;
 
+    // set indices
     indices[triInd + 0] = triInd + 0;
     indices[triInd + 1] = triInd + 1;
     indices[triInd + 2] = triInd + 2;
@@ -35,12 +32,11 @@ void CreateTri(int triInd, int x, int y, float4 heights)
 [numthreads(10, 10, 1)]
 void MeshGen(uint3 id : SV_DispatchThreadID)
 {
+    // get width and height of texture
     uint width = 0;
     uint height = 0;
     heightmap.GetDimensions(width, height);
     if (id.y >= rowCount || id.x >= colCount) return;
-
-    int triInd = (id.x + id.y * colCount) * 6;
 
     // get height from texture
     float ld = max(max((float)colCount, (float)rowCount), 1);
@@ -55,6 +51,7 @@ void MeshGen(uint3 id : SV_DispatchThreadID)
         heightmap[hid4].x * heightmap[hid4].w
         );
 
-    debug[(id.x + id.y * colCount) * 4] = float4(hid1.x, hid2.x, heights[0], 0);
+    // index in index and triangle buffers
+    int triInd = (id.x + id.y * colCount) * 6;
     CreateTri(triInd, id.x, id.y, heights);
 }

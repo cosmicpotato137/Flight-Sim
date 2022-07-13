@@ -1,3 +1,4 @@
+using cosmicpotato.noisetools.Editor;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +14,6 @@ struct Triangle
 public class MarchingCubes : MonoBehaviour
 {
     public ComputeShader mcShader;  // marching cubes shader
-    public Noise3D noise;           // noise function
     public Material material;       // material of map
 
     public Vector3 scale = new Vector3(1, 1, 1);        // scale of map
@@ -22,6 +22,8 @@ public class MarchingCubes : MonoBehaviour
     public Vector3 chunkSize = new Vector3(16, 16, 16); // chunk size
     [Range(0, 1)] public float threshold = 0.5f;        // noise threshold
     public bool realtimeGeneration = false;             // update mesh as values are changed in the inspector
+
+    [HideInInspector] public Noise3D noise;             // noise function 
 
     int mcShaderID;                 // id of shader
     RenderTexture heightmapBuffer;  // heightmap render texture passed to shader

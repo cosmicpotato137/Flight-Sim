@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.cosmicpotato.noisetools": {
+      "version": "https://github.com/msunde137/noise-tools.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "2e2df3f9bb3b048618aabc4884551747f15caa53"
+    },
     "com.unity.burst": {
       "version": "1.6.5",
       "depth": 1,
