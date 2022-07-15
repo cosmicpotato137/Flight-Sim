@@ -105,15 +105,50 @@ public class MarchingCubes : MonoBehaviour
     public void GenerateMesh()
     {
         InitBuffers();
-        InitShader();
-        DispatchShader();
-        ReleaseBuffers();
 
-        // make mesh
-        if (!gameObject.GetComponent<MeshFilter>())
-            gameObject.AddComponent<MeshFilter>();
-        if (!gameObject.GetComponent<MeshRenderer>())
-            gameObject.AddComponent<MeshRenderer>();
+        // get list of children
+        List<Transform> children = new List<Transform>(gameObject.GetComponentsInChildren<Transform>(false));
+        if (children.Contains(this.transform))
+            children.Remove(this.transform);
+
+        // iterate over xyz chunks
+        int chunkIndex = 0;
+        for (int z = 0; z < mapSize.z; z++)
+        {
+            for (int y = 0; y < mapSize.y; y++)
+            {
+                for (int x = 0; x < mapSize.x; x++)
+                {
+                    chunkIndex = x + (int)mapSize.x * y + (int)mapSize.x * (int)mapSize.y * z;
+                    string name = string.Format("chunk ({0}, {1}, {2})", x, y, z);
+
+                    // make chunk if it doesn't exist
+                    GameObject g;
+                    if (chunkIndex >= children.Count)
+                    {
+                        g = new GameObject(name);
+                        g.transform.SetParent(transform);
+                        g.AddComponent<MeshFilter>();
+                        g.AddComponent<MeshRenderer>();
+                        children.Add(g.transform);
+                    }
+                    else
+                    {
+                        g = children[chunkIndex].gameObject;
+                        g.name = name;
+                    }
+
+                    // set transform
+                    g.transform.rotation = transform.rotation;
+                    g.transform.position = transform.rotation * Vector3.Scale(Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, z * chunkSize.z), scale), transform.localScale);
+                    g.transform.position += transform.position;
+
+                    // get heightmap
+                    int res = (int)Mathf.Max(chunkSize.x, Mathf.Max(chunkSize.y, chunkSize.z)) + 1;
+                    Vector3 offset = new Vector3(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res), chunkSize.z / (noise.scale.z * res));
+                    heightmapBuffer = noise.CalculateNoise(noise.offset + Vector3.Scale(new Vector3(x, y, z), offset), noise.scale, res);
+                    InitShader();
+                    DispatchShader();
 
         Vector3[] vertices = new Vector3[numTris * 3];
         int[] indices = new int[numTris * 3];
