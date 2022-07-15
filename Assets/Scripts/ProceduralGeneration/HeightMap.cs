@@ -1,3 +1,4 @@
+using cosmicpotato.noisetools.Editor;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,24 +7,23 @@ using UnityEngine.Rendering;
 [ExecuteInEditMode]
 public class HeightMap : MonoBehaviour
 {
-    public ComputeShader mcShader;
-    public Noise2D noise;
-    int mcShaderID;
+    public ComputeShader hmShader;  // heightmap compute shader
+    public Material material;       // material of map
 
-    public Vector3 scale;
-    public int xdim;
-    public int ydim;
-    public bool realtimeGeneration;
+    public Vector3 scale = new Vector3(1, 1, 1);        // scale of map
+    public Vector2 mapSize = new Vector2(2, 2);         // size of map in chunks
+    public int maxChunkSize = 10000;                    // max chunk area
+    public Vector2 chunkSize = new Vector2(100, 100);   // size of chunks
+    public bool realtimeGeneration = false;             // update mesh as values are changed in the inspector
 
-    RenderTexture heightmapBuffer;
-    ComputeBuffer vertexBuffer;
-    Vector3[] vertices;
-    ComputeBuffer indexBuffer;
-    int[] indices;
-    ComputeBuffer debugBuffer;
-    Vector4[] debugs;
+    [HideInInspector] public Noise2D noise;             // noise function 
 
-    Material material;
+    int mcShaderID;                 // shader id
+    RenderTexture heightmapBuffer;  // heightmap render texture
+    ComputeBuffer vertexBuffer;     // vertex buffer passed to shader
+    Vector3[] vertices;             // array of vertices
+    ComputeBuffer indexBuffer;      // index buffer passed to shader
+    int[] indices;                  // array of indices
 
     //List<Transform> children = new List<Transform>();
     [HideInInspector] public Dictionary<int, Transform> children;
@@ -52,74 +52,65 @@ public class HeightMap : MonoBehaviour
 
     private void OnValidate()
     {
-        xdim = (int)Mathf.Clamp(xdim, 1, Mathf.Infinity);
-        ydim = (int)Mathf.Clamp(ydim, 1, Mathf.Infinity);
-
+        mapSize = new Vector2(Mathf.Clamp(Mathf.Ceil(mapSize.x), 0, Mathf.Infinity), Mathf.Clamp(Mathf.Ceil(mapSize.y), 0, Mathf.Infinity));
+        chunkSize = new Vector2(Mathf.Clamp(Mathf.Ceil(chunkSize.x), 0, Mathf.Infinity), Mathf.Clamp(Mathf.Ceil(chunkSize.y), 0, Mathf.Infinity));
     }
 
-    public Vector3 MapScale()
-    {
-        return Vector3.Scale(transform.localScale, scale);
-    }
-
-    /// <summary>
-    /// Initialize index and vertex buffers
-    /// </summary>
     public void InitBuffers()
     {
         // setup local arrays
-        int triCount = xdim * ydim;
-        vertices = new Vector3[triCount * 6];
-        indices = new int[triCount * 6];
-        debugs = new Vector4[triCount];
-
-        // get heightmap
-        heightmapBuffer = noise.CalculateNoise(noise.offset, noise.scale, Mathf.Max(xdim, ydim));
+        int maxTris = (int)chunkSize.x * (int)chunkSize.y;
+        if (maxTris > maxChunkSize)
+        {
+            Debug.LogWarning("chunk size max reached!");
+            maxTris = maxChunkSize;
+        }
+        vertices = new Vector3[maxTris * 6];
+        indices = new int[maxTris * 6];
 
         // setup GPU buffers
         vertexBuffer = new ComputeBuffer(vertices.Length, sizeof(float) * 3, ComputeBufferType.Structured);
         indexBuffer = new ComputeBuffer(indices.Length, sizeof(int), ComputeBufferType.Structured);
-        debugBuffer = new ComputeBuffer(debugs.Length, sizeof(float) * 4, ComputeBufferType.Structured);
     }
 
+    /// <summary>
+    /// Release all buffers and render textures
+    /// </summary>
     public void ReleaseBuffers()
     {
         vertexBuffer.Release();
         indexBuffer.Release();
         RenderTexture.active = null;
         heightmapBuffer.Release();
-        debugBuffer.Release();
     }
 
+    /// <summary>
+    /// Set up shader and link buffers
+    /// </summary>
     public void InitShader()
     {
-        // setup shader
-        mcShaderID = mcShader.FindKernel("MeshGen");
-        mcShader.SetTexture(mcShaderID, "heightmap", heightmapBuffer);
-        mcShader.SetBuffer(mcShaderID, "vertices", vertexBuffer);
-        mcShader.SetBuffer(mcShaderID, "indices", indexBuffer);
-        mcShader.SetBuffer(mcShaderID, "debug", debugBuffer);
-        mcShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
-        mcShader.SetInt("colCount", xdim);
-        mcShader.SetInt("rowCount", ydim);
+        mcShaderID = hmShader.FindKernel("MeshGen");
+        hmShader.SetTexture(mcShaderID, "heightmap", heightmapBuffer);
+        hmShader.SetBuffer(mcShaderID, "vertices", vertexBuffer);
+        hmShader.SetBuffer(mcShaderID, "indices", indexBuffer);
+        hmShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
+        hmShader.SetInt("colCount", (int)chunkSize.x);
+        hmShader.SetInt("rowCount", (int)chunkSize.y);
     }
 
+    /// <summary>
+    /// Dispatch shader and load data
+    /// </summary>
     public void DispatchShader()
     {
-
+        // get threadgroup sizes
         uint kx = 0, ky = 0, kz = 0;
-        mcShader.GetKernelThreadGroupSizes(mcShaderID, out kx, out ky, out kz);
-        mcShader.Dispatch(mcShaderID, (int)(xdim / kx) + 1, (int)(ydim / ky) + 1, 1);
+        hmShader.GetKernelThreadGroupSizes(mcShaderID, out kx, out ky, out kz);
+        hmShader.Dispatch(mcShaderID, (int)(chunkSize.x / kx) + 1, (int)(chunkSize.y / ky) + 1, 1);
 
         // get data from GPU
         vertexBuffer.GetData(vertices);
         indexBuffer.GetData(indices);
-        debugBuffer.GetData(debugs);
-
-        //for (int i = 0; i < debugs.Length; i++)
-        //{
-        //    print(debugs[i]);
-        //}
     }
 
     public int SetChunk(int x, int y)
@@ -195,8 +186,10 @@ public class HeightMap : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
-    void Update()
+    /// <summary>
+    /// Destroy all chunks
+    /// </summary>
+    public void ClearMesh()
     {
         if (children != null)
             children.Clear();

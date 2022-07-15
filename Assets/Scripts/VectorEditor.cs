@@ -5,11 +5,10 @@ using UnityEngine;
 [ExecuteAlways]
 public class VectorEditor : MonoBehaviour
 {
-    public float padding;
-    RectTransform rectTransform;
+    public float padding;                   // distance between child elements
+    RectTransform rectTransform;            // transform of parent
     [HideInInspector]
-    public List<RectTransform> children;
-    Vector3 current;
+    public List<RectTransform> children;    // list of children
 
     private void OnValidate()
     {
@@ -29,6 +28,9 @@ public class VectorEditor : MonoBehaviour
         PlaceChildren();
     }
 
+    /// <summary>
+    /// Positions and scales children
+    /// </summary>
     void PlaceChildren()
     {
         for (int i = 0; i < children.Count; i++)
@@ -44,6 +46,9 @@ public class VectorEditor : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Gets a list of children for the current gameObject
+    /// </summary>
     void GetChildren()
     {
         children = new List<RectTransform>();

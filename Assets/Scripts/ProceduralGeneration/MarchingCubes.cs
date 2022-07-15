@@ -1,3 +1,4 @@
+using cosmicpotato.noisetools.Editor;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,60 +13,58 @@ struct Triangle
 [ExecuteInEditMode]
 public class MarchingCubes : MonoBehaviour
 {
-    public ComputeShader mcShader;
-    public PerlinNoise3D noise;
-    int mcShaderID;
+    public ComputeShader mcShader;  // marching cubes shader
+    public Material material;       // material of map
 
-    public Vector3 scale;
-    [Range(1.0f, 100000)]
-    public int maxChunkSize = 1000;
-    public int xdim = 5;
-    public int ydim = 5;
-    public int zdim = 5;
-    public float threshold = .5f;
-    public bool realtimeGeneration;
+    public Vector3 scale = new Vector3(1, 1, 1);        // scale of map
+    public Vector3 mapSize = new Vector3(1, 1, 1);      // map size in chunks
+    public int maxChunkSize = 10000;                    // max chunk area
+    public Vector3 chunkSize = new Vector3(16, 16, 16); // chunk size
+    [Range(0, 1)] public float threshold = 0.5f;        // noise threshold
+    public bool realtimeGeneration = false;             // update mesh as values are changed in the inspector
 
-    RenderTexture heightmapBuffer;
-    ComputeBuffer triangleBuffer;
-    ComputeBuffer triCountBuffer;
-    Triangle[] triangles;
-    ComputeBuffer indexBuffer;
-    int[] indices;
-    ComputeBuffer debugBuffer;
-    Matrix4x4[] debugs;
+    [HideInInspector] public Noise3D noise;             // noise function 
 
-    int numTris;
+    int mcShaderID;                 // id of shader
+    RenderTexture heightmapBuffer;  // heightmap render texture passed to shader
+    ComputeBuffer triangleBuffer;   // triangle vertex buffer passed to shader
+    Triangle[] triangles;           // triangle array
+    ComputeBuffer triCountBuffer;   // triangle count buffer passed to shader
+    int numTris;                    // number of triangles
 
+    /// <summary>
+    /// Initialize triangle and triangle count buffers
+    /// </summary>
     public void InitBuffers()
     {
         // setup local arrays
-        int maxTris = xdim * ydim * zdim;
+        int maxTris = (int)(chunkSize.x * chunkSize.y * chunkSize.z);
         if (maxTris > maxChunkSize)
         {
             Debug.LogWarning("chunk size max reached!");
             maxTris = maxChunkSize;
         }
         triangles = new Triangle[maxTris * 5];
-        //debugs = new Matrix4x4[triCount];
-
-        
-        heightmapBuffer = noise.CalculateNoise();
 
         // setup GPU buffers
         triangleBuffer = new ComputeBuffer(triangles.Length, sizeof(float) * 9, ComputeBufferType.Append);
         triCountBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
-        //debugBuffer = new ComputeBuffer(debugs.Length, sizeof(float) * 4 * 4, ComputeBufferType.Structured);
     }
 
+    /// <summary>
+    /// Release all buffers and textures
+    /// </summary>
     public void ReleaseBuffers()
     {
         triCountBuffer.Release();
         triangleBuffer.Release();
         RenderTexture.active = null;
         heightmapBuffer.Release();
-        //debugBuffer.Release();
     }
 
+    /// <summary>
+    /// Set up shaders and link buffers
+    /// </summary>
     public void InitShader()
     {
         // setup shader
@@ -73,20 +72,22 @@ public class MarchingCubes : MonoBehaviour
         mcShader.SetTexture(mcShaderID, "noiseTexture", heightmapBuffer);
         triangleBuffer.SetCounterValue(0);
         mcShader.SetBuffer(mcShaderID, "triangles", triangleBuffer);
-        //mcShader.SetBuffer(mcShaderID, "debug", debugBuffer);
-
         mcShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
-        mcShader.SetInt("xdim", xdim);
-        mcShader.SetInt("ydim", ydim);
-        mcShader.SetInt("zdim", zdim);
+        mcShader.SetInt("xdim", (int)chunkSize.x);
+        mcShader.SetInt("ydim", (int)chunkSize.y);
+        mcShader.SetInt("zdim", (int)chunkSize.z);
         mcShader.SetFloat("isoLevel", threshold);
     }
 
+    /// <summary>
+    /// Dispatch shader and read buffers
+    /// </summary>
     public void DispatchShader()
     {
+        // find threadgroup sizes
         uint kx = 0, ky = 0, kz = 0;
         mcShader.GetKernelThreadGroupSizes(mcShaderID, out kx, out ky, out kz);
-        mcShader.Dispatch(mcShaderID, (int)((float)xdim / (float)kx) + 1, (int)((float)ydim / (float)ky) + 1, (int)((float)zdim / (float)kz) + 1);
+        mcShader.Dispatch(mcShaderID, (int)((float)chunkSize.x / (float)kx) + 1, (int)((float)chunkSize.y / (float)ky) + 1, (int)((float)chunkSize.z / (float)kz) + 1);
 
         // get data from GPU
         ComputeBuffer.CopyCount(triangleBuffer, triCountBuffer, 0);
@@ -94,14 +95,11 @@ public class MarchingCubes : MonoBehaviour
         triCountBuffer.GetData(triCountArray);
         numTris = triCountArray[0];
         triangleBuffer.GetData(triangles);
-        //debugBuffer.GetData(debugs);
-
-        //for (int i = 0; i < debugs.Length; i++)
-        //{
-        //    print(debugs[i]);
-        //}
     }
 
+    /// <summary>
+    /// Generate 3D mesh chunks
+    /// </summary>
     public void GenerateMesh()
     {
         InitBuffers();
@@ -150,40 +148,46 @@ public class MarchingCubes : MonoBehaviour
                     InitShader();
                     DispatchShader();
 
-        Vector3[] vertices = new Vector3[numTris * 3];
-        int[] indices = new int[numTris * 3];
-        for (int i = 0; i < numTris; i++)
-        {
-            vertices[i * 3] = triangles[i].A;
-            vertices[i * 3 + 1] = triangles[i].B;
-            vertices[i * 3 + 2] = triangles[i].C;
-            indices[i * 3] = i * 3;
-            indices[i * 3 + 1] = i * 3 + 1;
-            indices[i * 3 + 2] = i * 3 + 2;
-        }
+                    // get vertices and indices from triangles
+                    Vector3[] vertices = new Vector3[numTris * 3];
+                    int[] indices = new int[numTris * 3];
+                    for (int i = 0; i < numTris; i++)
+                    {
+                        vertices[i * 3] = triangles[i].A;
+                        vertices[i * 3 + 1] = triangles[i].B;
+                        vertices[i * 3 + 2] = triangles[i].C;
+                        indices[i * 3] = i * 3;
+                        indices[i * 3 + 1] = i * 3 + 1;
+                        indices[i * 3 + 2] = i * 3 + 2;
+                    }
 
-        Mesh mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.triangles = indices;
-        mesh.Optimize();
-        mesh.RecalculateNormals();
-        GetComponent<MeshFilter>().mesh = mesh;
+                    // set mesh
+                    Mesh mesh = new Mesh();
+                    mesh.vertices = vertices;
+                    mesh.triangles = indices;
+                    mesh.Optimize();
+                    mesh.RecalculateNormals();
+                    g.GetComponent<MeshFilter>().mesh = mesh;
+                    g.GetComponent<Renderer>().material = material;
+                }
+            }
+        }
+        ReleaseBuffers();
+
+        // destroy all unused chunks
+        for (int i = children.Count; i > chunkIndex + 1; i--)
+        {
+            DestroyImmediate(children[chunkIndex + 1].gameObject);
+            children.RemoveAt(chunkIndex + 1);
+        }
     }
 
+    /// <summary>
+    /// Destroy all chunks
+    /// </summary>
     public void ClearMesh()
     {
-        GetComponent<MeshFilter>().mesh = new Mesh();
-    }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
+        for (int i = this.transform.childCount; i > 0; --i)
+            DestroyImmediate(this.transform.GetChild(0).gameObject);
     }
 }

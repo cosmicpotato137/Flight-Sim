@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.cosmicpotato.noisetools": {
+      "version": "file:S:/NerdThings/Unity/My Packages/noise-tools",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.6.5",
       "depth": 1,
