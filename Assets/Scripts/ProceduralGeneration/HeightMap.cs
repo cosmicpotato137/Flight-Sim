@@ -96,7 +96,6 @@ public class HeightMap : MonoBehaviour
     /// </summary>
     public void GenerateMesh()
     {
-
         InitBuffers();
 
         // get a list of child transforms

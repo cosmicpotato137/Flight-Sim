@@ -1,11 +1,10 @@
 {
   "dependencies": {
     "com.cosmicpotato.noisetools": {
-      "version": "https://github.com/msunde137/noise-tools.git",
+      "version": "file:S:/NerdThings/Unity/My Packages/noise-tools",
       "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "2e2df3f9bb3b048618aabc4884551747f15caa53"
+      "source": "local",
+      "dependencies": {}
     },
     "com.unity.burst": {
       "version": "1.6.5",
