@@ -1,6 +1,7 @@
 using cosmicpotato.noisetools.Editor;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -26,7 +27,7 @@ public class HeightMap : MonoBehaviour
     int[] indices;                  // array of indices
 
     //List<Transform> children = new List<Transform>();
-    [HideInInspector] public Dictionary<int, Transform> children;
+    Dictionary<Vector2, Transform> children;
 
     private void OnEnable()
     {
@@ -113,16 +114,41 @@ public class HeightMap : MonoBehaviour
         indexBuffer.GetData(indices);
     }
 
-    public int SetChunk(int x, int y)
+    public GameObject GetChunk(int x, int y)
     {
-        int chunkIndex = x + (int)mapSize.x * y;
+        return children[new Vector2(x, y)].gameObject;
+    }
+
+    public List<Vector2> ChunkIndices()
+    {
+        return new List<Vector2>(children.Select(x => x.Key));
+    }
+
+    public void RemoveChunk(int x, int y)
+    {
+        Vector2 key = new Vector2(x, y);
+        RemoveChunk(key);
+    }
+
+    public void RemoveChunk(Vector2 key)
+    {
+        if (children[key] != null)
+            DestroyImmediate(children[key].gameObject);
+        children.Remove(key);
+    }
+
+    public void SetChunk(int x, int y, bool recalculate = false)
+    {
+        Vector2 chunkIndex = new Vector2(x, y);
         string name = string.Format("chunk ({0}, {1})", x, y);
 
         // make new chunk GameObject if one doesn't exist
         GameObject g;
-        if (!children.ContainsKey(chunkIndex))
+        bool newObj = !children.ContainsKey(chunkIndex);
+        if (newObj)
         {
             g = new GameObject(name);
+            g.layer = gameObject.layer;
             g.transform.SetParent(transform);
             g.AddComponent<MeshFilter>();
             g.AddComponent<MeshRenderer>();
@@ -134,29 +160,31 @@ public class HeightMap : MonoBehaviour
             g.name = name;
         }
 
-        // set transform
-        g.transform.rotation = transform.rotation;
-        g.transform.position = transform.rotation * Vector3.Scale(Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, 0), scale), transform.localScale);
-        g.transform.position += transform.position;
-        g.transform.localScale = new Vector3(1, 1, 1);
+        // set mesh, material, colliders
+        if (newObj || recalculate)
+        {
+            // set transform
+            g.transform.rotation = transform.rotation;
+            g.transform.position = transform.rotation * Vector3.Scale(Vector3.Scale(new Vector3(x * chunkSize.x, y * chunkSize.y, 0), scale), transform.localScale);
+            g.transform.position += transform.position;
+            g.transform.localScale = new Vector3(1, 1, 1);
 
-        // get heightmap
-        int res = (int)Mathf.Max(chunkSize.x, chunkSize.y) + 1;
-        Vector2 offset = new Vector2(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res));
-        heightmapBuffer = noise.CalculateNoise(noise.offset + new Vector2(x, y) * offset, noise.scale, res);
-        InitShader();
-        DispatchShader();
+            // get heightmap
+            int res = (int)Mathf.Max(chunkSize.x, chunkSize.y) + 1;
+            Vector2 offset = new Vector2(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res));
+            heightmapBuffer = noise.CalculateNoise(noise.offset + new Vector2(x, y) * offset, noise.scale, res);
+            InitShader();
+            DispatchShader();
 
-        // set mesh
-        Mesh mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.triangles = indices;
-        mesh.Optimize();
-        mesh.RecalculateNormals();
-        g.GetComponent<MeshFilter>().mesh = mesh;
-        g.GetComponent<Renderer>().material = material;
-
-        return chunkIndex;
+            // set mesh
+            Mesh mesh = new Mesh();
+            mesh.vertices = vertices;
+            mesh.triangles = indices;
+            mesh.Optimize();
+            mesh.RecalculateNormals();
+            g.GetComponent<MeshFilter>().mesh = mesh;
+            g.GetComponent<Renderer>().material = material;
+        }
     }
 
     /// <summary>
@@ -166,23 +194,25 @@ public class HeightMap : MonoBehaviour
     {
         InitBuffers();
         // iterate over x and y chunks
-        int chunkIndex = 0;
         for (int y = 0; y < mapSize.y; y++)
         {
             for (int x = 0; x < mapSize.x; x++)
             {
-                chunkIndex = SetChunk(x, y);
+                SetChunk(x, y, true);
             }
         }
         ReleaseBuffers();
 
         // destroy any unused chunks
-        int childCount = children.Count;
-        for (int i = chunkIndex + 1; i < childCount; i++)
+        List<Vector2> keys = new List<Vector2>(children.Select(x => x.Key));
+        foreach (Vector2 key in keys)
         {
-            if (children.ContainsKey(i) && children[i] != null)
-                DestroyImmediate(children[i].gameObject);
-            children.Remove(i);
+            if (key.x >= mapSize.x || key.y >= mapSize.y)
+            {
+                if (children[key] != null)
+                    DestroyImmediate(children[key].gameObject);
+                children.Remove(key);
+            }
         }
     }
 
@@ -194,7 +224,7 @@ public class HeightMap : MonoBehaviour
         if (children != null)
             children.Clear();
         else 
-            children = new Dictionary<int, Transform>();
+            children = new Dictionary<Vector2, Transform>();
         for (int i = transform.childCount - 1; i >= 0; i--)
             DestroyImmediate(transform.GetChild(i).gameObject);
     }
