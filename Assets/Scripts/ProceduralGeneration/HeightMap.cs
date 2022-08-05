@@ -1,4 +1,4 @@
-using cosmicpotato.noisetools.Editor;
+using cosmicpotato.noisetools.Runtime;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
