@@ -2,13 +2,15 @@
 #pragma kernel MeshGen
 
 // Generate mesh given a Texture2D heightmap
-Texture2D<float4> heightmap;
+RWStructuredBuffer<double2> heightmap;
 
 RWStructuredBuffer<float3> vertices;
 RWStructuredBuffer<int> indices;
 float3 scale;
 uint colCount;
 uint rowCount;
+
+uint noiseRes;
 
 void CreateTri(int triInd, int x, int y, float4 heights)
 {
@@ -29,26 +31,35 @@ void CreateTri(int triInd, int x, int y, float4 heights)
     indices[triInd + 5] = triInd + 5;
 }
 
+uint convertIndex(uint2 id, uint width) 
+{
+    return id.x + id.y * width;
+}
+
 [numthreads(10, 10, 1)]
 void MeshGen(uint3 id : SV_DispatchThreadID)
 {
     // get width and height of texture
-    uint width = 0;
-    uint height = 0;
-    heightmap.GetDimensions(width, height);
     if (id.y >= rowCount || id.x >= colCount) return;
 
+    uint width = noiseRes;
+    uint height = noiseRes;
     // get height from texture
     float ld = max(max((float)colCount, (float)rowCount), 1);
-    uint2 hid1 = uint2((float)id.x / (float)ld * (float)width, (float)id.y / (float)ld * (float)height);
-    uint2 hid2 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)id.y / (float)ld * (float)height);
-    uint2 hid3 = uint2((float)id.x / (float)ld * (float)width, (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
-    uint2 hid4 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
+    //uint2 hid1 = uint2((float)id.x / (float)ld * (float)width, (float)id.y / (float)ld * (float)height);
+    //uint2 hid2 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)id.y / (float)ld * (float)height);
+    //uint2 hid3 = uint2((float)id.x / (float)ld * (float)width, (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
+    //uint2 hid4 = uint2((float)min((id.x + 1) / (float)ld * (float)width, (float)width - 1), (float)min((id.y + 1) / (float)ld * (float)height, (float)height - 1));
+
+    uint hid1 = (float)(id.x + 0) + (float)(id.y + 0) * (float)noiseRes;
+    uint hid2 = (float)(id.x + 1) + (float)(id.y + 0) * (float)noiseRes;
+    uint hid3 = (float)(id.x + 0) + (float)(id.y + 1) * (float)noiseRes;
+    uint hid4 = (float)(id.x + 1) + (float)(id.y + 1) * (float)noiseRes;
     float4 heights = float4(
-        heightmap[hid1].x * heightmap[hid1].w,
-        heightmap[hid2].x * heightmap[hid2].w,
-        heightmap[hid3].x * heightmap[hid3].w,
-        heightmap[hid4].x * heightmap[hid4].w
+        heightmap[hid1].x * heightmap[hid1].y,
+        heightmap[hid2].x * heightmap[hid2].y, 
+        heightmap[hid3].x * heightmap[hid3].y,
+        heightmap[hid4].x * heightmap[hid4].y
         );
 
     // index in index and triangle buffers

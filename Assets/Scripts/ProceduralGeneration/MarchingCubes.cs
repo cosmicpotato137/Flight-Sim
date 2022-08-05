@@ -1,4 +1,9 @@
-using cosmicpotato.noisetools.Editor;
+//
+// marching cubes script modified from Sebastian Lague's project
+// https://github.com/SebLague/Marching-Cubes/blob/master/Assets/Scripts/MeshGenerator.cs
+//
+
+using cosmicpotato.noisetools.Runtime;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -144,7 +149,7 @@ public class MarchingCubes : MonoBehaviour
                     // get heightmap
                     int res = (int)Mathf.Max(chunkSize.x, Mathf.Max(chunkSize.y, chunkSize.z)) + 1;
                     Vector3 offset = new Vector3(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res), chunkSize.z / (noise.scale.z * res));
-                    heightmapBuffer = noise.CalculateNoise(noise.offset + Vector3.Scale(new Vector3(x, y, z), offset), noise.scale, res);
+                    //heightmapBuffer = noise.CalculateNoise(noise.offset + Vector3.Scale(new Vector3(x, y, z), offset), noise.scale, res);
                     InitShader();
                     DispatchShader();
 

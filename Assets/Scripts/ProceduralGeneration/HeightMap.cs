@@ -1,4 +1,4 @@
-using cosmicpotato.noisetools.Editor;
+using cosmicpotato.noisetools.Runtime;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +20,7 @@ public class HeightMap : MonoBehaviour
     [HideInInspector] public Noise2D noise;             // noise function 
 
     int mcShaderID;                 // shader id
-    RenderTexture heightmapBuffer;  // heightmap render texture
+    ComputeBuffer heightmapBuffer;  // heightmap render texture
     ComputeBuffer vertexBuffer;     // vertex buffer passed to shader
     Vector3[] vertices;             // array of vertices
     ComputeBuffer indexBuffer;      // index buffer passed to shader
@@ -35,7 +35,8 @@ public class HeightMap : MonoBehaviour
         //children = new List<Transform>(gameObject.GetComponentsInChildren<Transform>(false));
         //if (children.Contains(this.transform))
         //    children.Remove(this.transform);
-
+        if (noise == null)
+            noise = new PerlinNoise2D();
         ClearMesh();
         GenerateMesh();
     }
@@ -86,24 +87,19 @@ public class HeightMap : MonoBehaviour
     }
 
     /// <summary>
-    /// Set up shader and link buffers
+    /// Dispatch shader and load data
     /// </summary>
-    public void InitShader()
+    public void DispatchShader()
     {
         mcShaderID = hmShader.FindKernel("MeshGen");
-        hmShader.SetTexture(mcShaderID, "heightmap", heightmapBuffer);
+        hmShader.SetBuffer(mcShaderID, "heightmap", heightmapBuffer);
         hmShader.SetBuffer(mcShaderID, "vertices", vertexBuffer);
         hmShader.SetBuffer(mcShaderID, "indices", indexBuffer);
         hmShader.SetFloats("scale", new float[] { scale.x, scale.y, scale.z });
         hmShader.SetInt("colCount", (int)chunkSize.x);
         hmShader.SetInt("rowCount", (int)chunkSize.y);
-    }
+        hmShader.SetInt("noiseRes", noise.resolution);
 
-    /// <summary>
-    /// Dispatch shader and load data
-    /// </summary>
-    public void DispatchShader()
-    {
         // get threadgroup sizes
         uint kx = 0, ky = 0, kz = 0;
         hmShader.GetKernelThreadGroupSizes(mcShaderID, out kx, out ky, out kz);
@@ -172,8 +168,9 @@ public class HeightMap : MonoBehaviour
             // get heightmap
             int res = (int)Mathf.Max(chunkSize.x, chunkSize.y) + 1;
             Vector2 offset = new Vector2(chunkSize.x / (noise.scale.x * res), chunkSize.y / (noise.scale.y * res));
-            heightmapBuffer = noise.CalculateNoise(noise.offset + new Vector2(x, y) * offset, noise.scale, res);
-            InitShader();
+            double[,] noiseArray = noise.CalculateNoise(noise.offset + new Vector2(x, y) * offset, noise.scale, res);
+            heightmapBuffer = new ComputeBuffer(noiseArray.GetLength(0), sizeof(double) * noiseArray.GetLength(1), ComputeBufferType.Structured);
+            heightmapBuffer.SetData(noiseArray);
             DispatchShader();
 
             // set mesh
