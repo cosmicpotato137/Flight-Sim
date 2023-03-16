@@ -23,7 +23,7 @@ public class HeightMapEditor : Editor
 
         EditorGUI.BeginDisabledGroup(hm.realtimeGeneration);
         if (GUILayout.Button("Generate Mesh"))
-            hm.GenerateMesh();
+            hm.GenerateOnce();
         EditorGUI.EndDisabledGroup();
 
         bool changed = EditorGUI.EndChangeCheck();
@@ -40,7 +40,7 @@ public class HeightMapEditor : Editor
         if (changed || EditorGUI.EndChangeCheck())
         {
             if (hm.realtimeGeneration)
-                hm.GenerateMesh();
+                hm.GenerateOnce();
         }
     }
 }

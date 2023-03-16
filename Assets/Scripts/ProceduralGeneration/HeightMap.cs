@@ -37,7 +37,7 @@ public class HeightMap : MonoBehaviour
         //    children.Remove(this.transform);
 
         ClearMesh();
-        GenerateMesh();
+        GenerateOnce();
     }
 
     private void Reset()
@@ -48,7 +48,7 @@ public class HeightMap : MonoBehaviour
         //    children.Remove(this.transform);
 
         ClearMesh();
-        GenerateMesh();
+        GenerateOnce();
     }
 
     private void OnValidate()
@@ -152,6 +152,9 @@ public class HeightMap : MonoBehaviour
             g.transform.SetParent(transform);
             g.AddComponent<MeshFilter>();
             g.AddComponent<MeshRenderer>();
+            g.GetComponent<MeshFilter>().mesh = new Mesh();
+            g.GetComponent<Renderer>().material = material;
+
             children.Add(chunkIndex, g.transform);
         }
         else
@@ -177,20 +180,17 @@ public class HeightMap : MonoBehaviour
             DispatchShader();
 
             // set mesh
-            Mesh mesh = new Mesh();
-            mesh.vertices = vertices;
-            mesh.triangles = indices;
-            mesh.Optimize();
-            mesh.RecalculateNormals();
-            g.GetComponent<MeshFilter>().mesh = mesh;
-            g.GetComponent<Renderer>().material = material;
+            g.GetComponent<MeshFilter>().sharedMesh.vertices = vertices;
+            g.GetComponent<MeshFilter>().sharedMesh.triangles = indices;
+            g.GetComponent<MeshFilter>().sharedMesh.Optimize();
+            g.GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
         }
     }
 
     /// <summary>
     /// Generate 2D mesh chunks
     /// </summary>
-    public void GenerateMesh()
+    public void GenerateOnce()
     {
         InitBuffers();
         // iterate over x and y chunks
@@ -203,18 +203,20 @@ public class HeightMap : MonoBehaviour
         }
         ReleaseBuffers();
 
-        // destroy any unused chunks
-        List<Vector2> keys = new List<Vector2>(children.Select(x => x.Key));
-        foreach (Vector2 key in keys)
+    }
+
+    public void GenerateMesh()
+    {
+        for (int y = 0; y < mapSize.y; y++)
         {
-            if (key.x >= mapSize.x || key.y >= mapSize.y)
+            for (int x = 0; x < mapSize.x; x++)
             {
-                if (children[key] != null)
-                    DestroyImmediate(children[key].gameObject);
-                children.Remove(key);
+                SetChunk(x, y, true);
             }
         }
     }
+
+
 
     /// <summary>
     /// Destroy all chunks

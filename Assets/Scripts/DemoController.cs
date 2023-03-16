@@ -47,7 +47,7 @@ public class DemoController : MonoBehaviour
             hm.noise.resolution = (int)resolutionUI.value;
             Vector2 newscale = hm.scale * (resolutionUI.maxValue / resolutionUI.value);
             hm.gameObject.transform.localScale = new Vector3(newscale.x, newscale.y, 1);
-            hm.GenerateMesh();
+            hm.GenerateOnce();
         }
     }
 
@@ -66,7 +66,7 @@ public class DemoController : MonoBehaviour
         {
             hm.noise.offset.x = offsetUI.children[0].GetComponent<VecValEditor>().GetCurrent();
             hm.noise.offset.y = offsetUI.children[1].GetComponent<VecValEditor>().GetCurrent();
-            hm.GenerateMesh();
+            hm.GenerateOnce();
         }
     }
 
@@ -86,7 +86,7 @@ public class DemoController : MonoBehaviour
             hm.noise.scale.x = scaleUI.children[0].GetComponent<VecValEditor>().GetCurrent();
             hm.noise.scale.y = scaleUI.children[1].GetComponent<VecValEditor>().GetCurrent();
             hm.scale.z = scaleUI.children[2].GetComponent<VecValEditor>().GetCurrent();
-            hm.GenerateMesh();
+            hm.GenerateOnce();
         }
     }
 
